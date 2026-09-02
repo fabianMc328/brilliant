@@ -6,3 +6,9 @@ bool todosDiferentesAlInsertar(List<int> lista, int numeroAInsertar) {
   final elementosUnicos = lista.toSet();
   return elementosUnicos.length == lista.length;
 }
+ 
+ bool AreaMorada(List<int> lista, int numeroAInsertar){
+final elementosUnicos = {...lista, numeroAInsertar};
+  return elementosUnicos.length <= 2;
+
+ }

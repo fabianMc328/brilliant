@@ -24,4 +24,36 @@ void main() {
       expect(todosDiferentesAlInsertar([-1, 0, 2], 0), isFalse);
     });
   });
+
+
+
+group('Pruebas para Área Morada', () {
+    test('Debe retornar true al insertar el primer número en un área vacía', () {
+      expect(AreaMorada([], 4), isTrue);
+    });
+
+    test('Debe retornar true al insertar un segundo valor diferente', () {
+      final area = [4, 4];
+      expect(AreaMorada(area, 2), isTrue);
+    });
+
+    test('Debe retornar true al repetir uno de los dos valores ya existentes', () {
+      final area = [1, 2, 1, 2];
+      expect(AreaMorada(area, 1), isTrue);
+      expect(AreaMorada(area, 2), isTrue);
+    });
+
+    test('Debe retornar false al intentar ingresar un tercer valor diferente', () {
+      final area = [1, 2, 1];
+      expect(AreaMorada(area, 3), isFalse);
+    });
+
+    test('Debe retornar false si el área ya contenía 3 o más valores distintos', () {
+      final area = [1, 2, 3];
+      expect(AreaMorada(area, 2), isFalse);
+    });
+  });
+
+
+  
 }
