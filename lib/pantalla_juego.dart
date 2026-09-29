@@ -1,7 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'casilla_juego.dart';
 import 'tipo.dart';
 import 'region.dart';
+import 'juego_bloc.dart';
+import 'juego_evento.dart';
+import 'juego_estado.dart';
 
 class PantallaJuego extends StatefulWidget {
   const PantallaJuego({super.key});
@@ -23,9 +27,6 @@ class _PantallaJuegoState extends State<PantallaJuego> {
     const Coordenada(6, 4), // Rojo
   ];
 
-  // Mapa temporal para guardar los números que pongamos en la UI
-  Map<Coordenada, int> valores = {};
-
   @override
   void initState() {
     super.initState();
@@ -45,84 +46,188 @@ class _PantallaJuegoState extends State<PantallaJuego> {
       [colorRojo, colorRojo, colorMorado, colorRojo, colorRojo, colorAzul, colorAzul],
       [colorAmarillo, colorMorado, colorMorado, colorRojo, colorRojo, colorAzul, colorAmarillo],
     ];
+
+    // Iniciamos la configuración enviando las coordenadas al Bloc
+    context.read<JuegoBloc>().add(IniciarConfiguracionInicial(casillasIniciales));
   }
 
-  void _alTocarCasilla(Coordenada coord) {
-    if (casillasIniciales.contains(coord)) {
-      setState(() {
-        // Simulamos la inserción de números ciclando del 1 al 6 para probar la UI
-        int valorActual = valores[coord] ?? 0;
-        if (valorActual >= 6) {
-          valores.remove(coord);
-        } else {
-          valores[coord] = valorActual + 1;
-        }
-      });
-    }
+  void _alTocarCasilla(BuildContext context, Coordenada coord, JuegoEsperandoValoresIniciales estado) {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) {
+        return Padding(
+          padding: const EdgeInsets.all(24.0),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text(
+                'Selecciona un número',
+                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 20),
+              Wrap(
+                spacing: 12,
+                runSpacing: 12,
+                alignment: WrapAlignment.center,
+                children: List.generate(6, (index) {
+                  final numero = index + 1;
+                  // Verificamos si este número ya fue colocado en otra casilla
+                  final yaUsado = estado.valoresColocados.containsValue(numero) && 
+                                  estado.valoresColocados[coord] != numero;
+                  
+                  return ActionChip(
+                    label: Text(
+                      '$numero',
+                      style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+                    ),
+                    padding: const EdgeInsets.all(12),
+                    backgroundColor: yaUsado ? Colors.grey.shade300 : Colors.white,
+                    disabledColor: Colors.grey.shade300,
+                    onPressed: yaUsado 
+                        ? null 
+                        : () {
+                            context.read<JuegoBloc>().add(ColocarValorInicial(coord, numero));
+                            Navigator.pop(ctx); // Cierra el bottom sheet
+                          },
+                  );
+                }),
+              ),
+            ],
+          ),
+        );
+      },
+    );
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Brilliant - Nivel 1'),
-        centerTitle: true,
-      ),
-      body: Center(
-        child: AspectRatio(
-          aspectRatio: 1,
-          child: Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: GridView.builder(
-              physics: const NeverScrollableScrollPhysics(),
-              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 7, // 7 columnas
-                crossAxisSpacing: 6.0,
-                mainAxisSpacing: 6.0,
-              ),
-              itemCount: 49, // 7x7 casillas
-              itemBuilder: (context, index) {
-                final fila = index ~/ 7;
-                final columna = index % 7;
-                final coord = Coordenada(fila, columna);
-                final esInicial = casillasIniciales.contains(coord);
-                final valor = valores[coord];
+    return BlocConsumer<JuegoBloc, JuegoEstado>(
+      listener: (context, state) {
+        if (state is JuegoError) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(state.mensaje), backgroundColor: Colors.red),
+          );
+        } else if (state is JuegoEnProgreso) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('¡Tablero listo! Fase 1 completada.'), backgroundColor: Colors.green),
+          );
+        }
+      },
+      builder: (context, state) {
+        // Encontrar el estado que contiene nuestros valores colocados
+        JuegoEsperandoValoresIniciales? estadoInicial;
+        if (state is JuegoEsperandoValoresIniciales) {
+          estadoInicial = state;
+        } else if (state is JuegoError && state.estadoAnterior is JuegoEsperandoValoresIniciales) {
+          estadoInicial = state.estadoAnterior as JuegoEsperandoValoresIniciales;
+        }
 
-                // Dibujar una estrella si es casilla inicial y no tiene valor aún
-                Widget? contenido;
-                if (esInicial && valor == null) {
-                  contenido = const Icon(
-                    Icons.star_rounded, 
-                    color: Colors.white70, 
-                    size: 28
-                  );
-                }
+        final Map<Coordenada, int> valoresActuales;
+        if (state is JuegoEnProgreso) {
+          valoresActuales = state.valoresColocados;
+        } else {
+          valoresActuales = estadoInicial?.valoresColocados ?? {};
+        }
+        
+        final bool listoParaAvanzar = estadoInicial?.listosParaAvanzar ?? false;
 
-                return GestureDetector(
-                  onTap: esInicial ? () => _alTocarCasilla(coord) : null,
-                  child: Stack(
-                    alignment: Alignment.center,
-                    children: [
-                      SizedBox(
-                        width: double.infinity,
-                        height: double.infinity,
-                        child: CasillaJuego(
-                          colorBase: coloresTablero[fila][columna],
-                          estado: valor != null 
-                              ? EstadoCasilla.usado 
-                              : EstadoCasilla.sinUsar,
-                          valor: valor,
-                        ),
-                      ),
-                      if (contenido != null) contenido,
-                    ],
-                  ),
-                );
-              },
-            ),
+        return Scaffold(
+          appBar: AppBar(
+            title: const Text('Brilliant - Nivel 1'),
+            centerTitle: true,
           ),
-        ),
-      ),
+          body: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              if (state is! JuegoEnProgreso)
+                const Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 24.0, vertical: 8.0),
+                  child: Text(
+                    'Fase 1: Toca las estrellas para asignar los números del 1 al 6. Cada número se usa una sola vez.',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(fontSize: 16, color: Colors.black87),
+                  ),
+                ),
+              Expanded(
+                child: Center(
+                  child: AspectRatio(
+                    aspectRatio: 1,
+                    child: Padding(
+                      padding: const EdgeInsets.all(32.0), // Aumentado para que no sea tan grande
+                      child: GridView.builder(
+                        physics: const NeverScrollableScrollPhysics(),
+                        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount: 7,
+                          crossAxisSpacing: 6.0,
+                          mainAxisSpacing: 6.0,
+                        ),
+                        itemCount: 49,
+                    itemBuilder: (context, index) {
+                      final fila = index ~/ 7;
+                      final columna = index % 7;
+                      final coord = Coordenada(fila, columna);
+                      final esInicial = casillasIniciales.contains(coord);
+                      final valor = valoresActuales[coord];
+
+                      // Dibujar una estrella si es casilla inicial y no tiene valor aún
+                      Widget? contenido;
+                      if (esInicial && valor == null) {
+                        contenido = const Icon(
+                          Icons.star_rounded, 
+                          color: Colors.white70, 
+                          size: 28
+                        );
+                      }
+
+                      return GestureDetector(
+                        onTap: (esInicial && estadoInicial != null) 
+                            ? () => _alTocarCasilla(context, coord, estadoInicial!) 
+                            : null,
+                        child: Stack(
+                          alignment: Alignment.center,
+                          children: [
+                            SizedBox(
+                              width: double.infinity,
+                              height: double.infinity,
+                              child: CasillaJuego(
+                                colorBase: coloresTablero[fila][columna],
+                                estado: valor != null 
+                                    ? EstadoCasilla.usado 
+                                    : EstadoCasilla.sinUsar,
+                                valor: valor,
+                              ),
+                            ),
+                            if (contenido != null) contenido,
+                          ],
+                        ),
+                      );
+                    },
+                  ),
+                ),
+              ),
+              ), // Close Center
+              ), // Close Expanded
+              const SizedBox(height: 20),
+              // Botón de comenzar nivel
+              if (state is JuegoEsperandoValoresIniciales || (state is JuegoError && state.estadoAnterior is JuegoEsperandoValoresIniciales))
+                ElevatedButton.icon(
+                  onPressed: listoParaAvanzar 
+                      ? () => context.read<JuegoBloc>().add(AvanzarJuego()) 
+                      : null,
+                  icon: const Icon(Icons.play_arrow),
+                  label: const Text('Comenzar Nivel'),
+                  style: ElevatedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
+                    textStyle: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  ),
+                ),
+            ],
+          ),
+        );
+      },
     );
   }
 }

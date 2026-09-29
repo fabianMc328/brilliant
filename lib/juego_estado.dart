@@ -33,7 +33,10 @@ class JuegoEsperandoValoresIniciales extends JuegoEstado {
 
 /// Fase 2: El juego ha comenzado
 class JuegoEnProgreso extends JuegoEstado {
-  // Aquí se manejará el estado durante la partida
+  /// Todos los valores que hay actualmente en el tablero
+  final Map<Coordenada, int> valoresColocados;
+
+  JuegoEnProgreso({required this.valoresColocados});
 }
 
 /// Estado para mostrar errores (ej. intentar colocar un número repetido)

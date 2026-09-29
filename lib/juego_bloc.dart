@@ -74,7 +74,7 @@ class JuegoBloc extends Bloc<JuegoEvento, JuegoEstado> {
       // REGLA: No permitir avanzar hasta tener todos los valores (los 6) asignados
       if (estadoActual.listosParaAvanzar) {
         // ¡Las 6 casillas inciales ya tienen número! 
-        emit(JuegoEnProgreso());
+        emit(JuegoEnProgreso(valoresColocados: estadoActual.valoresColocados));
       } else {
         // Aún faltan casillas por llenar
         final faltantes = estadoActual.casillasInciales.length - estadoActual.valoresColocados.length;
