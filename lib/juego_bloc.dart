@@ -10,6 +10,7 @@ class JuegoBloc extends Bloc<JuegoEvento, JuegoEstado> {
     on<IniciarConfiguracionInicial>(_onIniciarConfiguracion);
     on<ColocarValorInicial>(_onColocarValorInicial);
     on<LlenarValoresAleatorios>(_onLlenarValoresAleatorios);
+    on<LimpiarValoresIniciales>(_onLimpiarValoresIniciales);
     on<AvanzarJuego>(_onAvanzarJuego);
   }
 
@@ -82,6 +83,17 @@ class JuegoBloc extends Bloc<JuegoEvento, JuegoEstado> {
       }
       
       emit(estadoActual.copiarCon(valoresColocados: nuevosValores));
+    }
+  }
+
+  void _onLimpiarValoresIniciales(
+    LimpiarValoresIniciales event,
+    Emitter<JuegoEstado> emit,
+  ) {
+    if (state is JuegoEsperandoValoresIniciales) {
+      final estadoActual = state as JuegoEsperandoValoresIniciales;
+      // Reseteamos enviando un mapa vacío
+      emit(estadoActual.copiarCon(valoresColocados: const {}));
     }
   }
 

@@ -22,3 +22,6 @@ class AvanzarJuego extends JuegoEvento {}
 
 /// Llena las 6 casillas iniciales con números del 1 al 6 de forma aleatoria
 class LlenarValoresAleatorios extends JuegoEvento {}
+
+/// Limpia todos los valores colocados en las casillas iniciales
+class LimpiarValoresIniciales extends JuegoEvento {}

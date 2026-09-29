@@ -78,20 +78,42 @@ class _PantallaJuegoState extends State<PantallaJuego> {
                   final yaUsado = estado.valoresColocados.containsValue(numero) && 
                                   estado.valoresColocados[coord] != numero;
                   
-                  return ActionChip(
-                    label: Text(
-                      '$numero',
-                      style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-                    ),
-                    padding: const EdgeInsets.all(12),
-                    backgroundColor: yaUsado ? Colors.grey.shade300 : Colors.white,
-                    disabledColor: Colors.grey.shade300,
-                    onPressed: yaUsado 
+                  return InkWell(
+                    onTap: yaUsado 
                         ? null 
                         : () {
                             context.read<JuegoBloc>().add(ColocarValorInicial(coord, numero));
-                            Navigator.pop(ctx); // Cierra el bottom sheet
+                            Navigator.pop(ctx);
                           },
+                    borderRadius: BorderRadius.circular(16),
+                    child: Container(
+                      width: 64,
+                      height: 64,
+                      decoration: BoxDecoration(
+                        color: yaUsado ? Colors.grey.shade100 : Colors.white,
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(
+                          color: yaUsado ? Colors.grey.shade300 : Colors.blue.shade300,
+                          width: 2,
+                        ),
+                        boxShadow: yaUsado ? [] : [
+                          BoxShadow(
+                            color: Colors.blue.withOpacity(0.15),
+                            blurRadius: 8,
+                            offset: const Offset(0, 4),
+                          )
+                        ],
+                      ),
+                      alignment: Alignment.center,
+                      child: Text(
+                        '$numero',
+                        style: TextStyle(
+                          fontSize: 28,
+                          fontWeight: FontWeight.w900,
+                          color: yaUsado ? Colors.grey.shade400 : Colors.blue.shade800,
+                        ),
+                      ),
+                    ),
                   );
                 }),
               ),
@@ -143,12 +165,32 @@ class _PantallaJuegoState extends State<PantallaJuego> {
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               if (state is! JuegoEnProgreso)
-                const Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 24.0, vertical: 8.0),
-                  child: Text(
-                    'Fase 1: Toca las estrellas para asignar los números del 1 al 6. Cada número se usa una sola vez.',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(fontSize: 16, color: Colors.black87),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 8.0),
+                  child: Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: Colors.blue.shade50,
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: Colors.blue.shade100, width: 1.5),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(Icons.lightbulb_outline, color: Colors.blue.shade700, size: 28),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: Text(
+                            'Fase 1: Toca las estrellas para asignar los números del 1 al 6 sin repetirlos.',
+                            style: TextStyle(
+                              fontSize: 15,
+                              color: Colors.blue.shade900,
+                              fontWeight: FontWeight.w600,
+                              height: 1.3,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               Expanded(
@@ -215,14 +257,39 @@ class _PantallaJuegoState extends State<PantallaJuego> {
               if (state is JuegoEsperandoValoresIniciales || (state is JuegoError && state.estadoAnterior is JuegoEsperandoValoresIniciales))
                 Column(
                   children: [
-                    TextButton.icon(
-                      onPressed: () => context.read<JuegoBloc>().add(LlenarValoresAleatorios()),
-                      icon: const Icon(Icons.casino),
-                      label: const Text('Qué flojera, acomódalos tú'),
-                      style: TextButton.styleFrom(
-                        foregroundColor: Colors.deepPurple,
-                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                      ),
+                    Wrap(
+                      alignment: WrapAlignment.center,
+                      spacing: 8,
+                      children: [
+                        ElevatedButton.icon(
+                          onPressed: valoresActuales.isNotEmpty 
+                              ? () => context.read<JuegoBloc>().add(LimpiarValoresIniciales())
+                              : null,
+                          icon: const Icon(Icons.delete_outline),
+                          label: const Text('Limpiar'),
+                          style: ElevatedButton.styleFrom(
+                            foregroundColor: Colors.red.shade700,
+                            backgroundColor: Colors.red.shade50,
+                            elevation: 0,
+                            side: BorderSide(color: Colors.red.shade200, width: 1.5),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                          ),
+                        ),
+                        ElevatedButton.icon(
+                          onPressed: () => context.read<JuegoBloc>().add(LlenarValoresAleatorios()),
+                          icon: const Icon(Icons.casino),
+                          label: const Text('Qué flojera, acomódalos tú'),
+                          style: ElevatedButton.styleFrom(
+                            foregroundColor: Colors.deepPurple.shade700,
+                            backgroundColor: Colors.deepPurple.shade50,
+                            elevation: 0,
+                            side: BorderSide(color: Colors.deepPurple.shade200, width: 1.5),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                          ),
+                        ),
+                      ],
                     ),
                     const SizedBox(height: 12),
                     ElevatedButton.icon(
