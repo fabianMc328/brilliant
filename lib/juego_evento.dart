@@ -19,3 +19,6 @@ class ColocarValorInicial extends JuegoEvento {
 
 /// Evento para intentar pasar a la Fase 2 del juego (o avanzar turno).
 class AvanzarJuego extends JuegoEvento {}
+
+/// Llena las 6 casillas iniciales con números del 1 al 6 de forma aleatoria
+class LlenarValoresAleatorios extends JuegoEvento {}

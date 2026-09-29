@@ -211,19 +211,34 @@ class _PantallaJuegoState extends State<PantallaJuego> {
               ), // Close Center
               ), // Close Expanded
               const SizedBox(height: 20),
-              // Botón de comenzar nivel
+              // Botones de acción
               if (state is JuegoEsperandoValoresIniciales || (state is JuegoError && state.estadoAnterior is JuegoEsperandoValoresIniciales))
-                ElevatedButton.icon(
-                  onPressed: listoParaAvanzar 
-                      ? () => context.read<JuegoBloc>().add(AvanzarJuego()) 
-                      : null,
-                  icon: const Icon(Icons.play_arrow),
-                  label: const Text('Comenzar Nivel'),
-                  style: ElevatedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
-                    textStyle: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                  ),
+                Column(
+                  children: [
+                    TextButton.icon(
+                      onPressed: () => context.read<JuegoBloc>().add(LlenarValoresAleatorios()),
+                      icon: const Icon(Icons.casino),
+                      label: const Text('Qué flojera, acomódalos tú'),
+                      style: TextButton.styleFrom(
+                        foregroundColor: Colors.deepPurple,
+                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    ElevatedButton.icon(
+                      onPressed: listoParaAvanzar 
+                          ? () => context.read<JuegoBloc>().add(AvanzarJuego()) 
+                          : null,
+                      icon: const Icon(Icons.play_arrow),
+                      label: const Text('Comenzar Nivel'),
+                      style: ElevatedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
+                        textStyle: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                  ],
                 ),
+              const SizedBox(height: 24),
             ],
           ),
         );

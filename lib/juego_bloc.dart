@@ -1,3 +1,4 @@
+import 'dart:math';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import 'juego_evento.dart';
@@ -8,6 +9,7 @@ class JuegoBloc extends Bloc<JuegoEvento, JuegoEstado> {
   JuegoBloc() : super(JuegoSinIniciar()) {
     on<IniciarConfiguracionInicial>(_onIniciarConfiguracion);
     on<ColocarValorInicial>(_onColocarValorInicial);
+    on<LlenarValoresAleatorios>(_onLlenarValoresAleatorios);
     on<AvanzarJuego>(_onAvanzarJuego);
   }
 
@@ -60,6 +62,25 @@ class JuegoBloc extends Bloc<JuegoEvento, JuegoEstado> {
       final nuevosValores = Map<Coordenada, int>.from(estadoActual.valoresColocados);
       nuevosValores[event.coordenada] = event.valor;
 
+      emit(estadoActual.copiarCon(valoresColocados: nuevosValores));
+    }
+  }
+
+  void _onLlenarValoresAleatorios(
+    LlenarValoresAleatorios event,
+    Emitter<JuegoEstado> emit,
+  ) {
+    if (state is JuegoEsperandoValoresIniciales) {
+      final estadoActual = state as JuegoEsperandoValoresIniciales;
+      
+      final numeros = [1, 2, 3, 4, 5, 6];
+      numeros.shuffle(Random());
+      
+      final nuevosValores = <Coordenada, int>{};
+      for (int i = 0; i < estadoActual.casillasInciales.length; i++) {
+        nuevosValores[estadoActual.casillasInciales[i]] = numeros[i];
+      }
+      
       emit(estadoActual.copiarCon(valoresColocados: nuevosValores));
     }
   }
