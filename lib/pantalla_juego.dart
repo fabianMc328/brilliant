@@ -74,29 +74,26 @@ class _PantallaJuegoState extends State<PantallaJuego> {
                 alignment: WrapAlignment.center,
                 children: List.generate(6, (index) {
                   final numero = index + 1;
-                  // Verificamos si este número ya fue colocado en otra casilla
-                  final yaUsado = estado.valoresColocados.containsValue(numero) && 
-                                  estado.valoresColocados[coord] != numero;
+                  // Verificamos si este número está actualmente en esta casilla específica
+                  final seleccionado = estado.valoresColocados[coord] == numero;
                   
                   return InkWell(
-                    onTap: yaUsado 
-                        ? null 
-                        : () {
-                            context.read<JuegoBloc>().add(ColocarValorInicial(coord, numero));
-                            Navigator.pop(ctx);
-                          },
+                    onTap: () {
+                      context.read<JuegoBloc>().add(ColocarValorInicial(coord, numero));
+                      Navigator.pop(ctx);
+                    },
                     borderRadius: BorderRadius.circular(16),
                     child: Container(
                       width: 64,
                       height: 64,
                       decoration: BoxDecoration(
-                        color: yaUsado ? Colors.grey.shade100 : Colors.white,
+                        color: seleccionado ? Colors.blue.shade100 : Colors.white,
                         borderRadius: BorderRadius.circular(16),
                         border: Border.all(
-                          color: yaUsado ? Colors.grey.shade300 : Colors.blue.shade300,
+                          color: seleccionado ? Colors.blue.shade600 : Colors.blue.shade300,
                           width: 2,
                         ),
-                        boxShadow: yaUsado ? [] : [
+                        boxShadow: [
                           BoxShadow(
                             color: Colors.blue.withOpacity(0.15),
                             blurRadius: 8,
@@ -110,7 +107,7 @@ class _PantallaJuegoState extends State<PantallaJuego> {
                         style: TextStyle(
                           fontSize: 28,
                           fontWeight: FontWeight.w900,
-                          color: yaUsado ? Colors.grey.shade400 : Colors.blue.shade800,
+                          color: Colors.blue.shade800,
                         ),
                       ),
                     ),
@@ -129,12 +126,57 @@ class _PantallaJuegoState extends State<PantallaJuego> {
     return BlocConsumer<JuegoBloc, JuegoEstado>(
       listener: (context, state) {
         if (state is JuegoError) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(state.mensaje), backgroundColor: Colors.red),
+          showDialog(
+            context: context,
+            builder: (ctx) => AlertDialog(
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+              title: Row(
+                children: [
+                  const Icon(Icons.warning_amber_rounded, color: Colors.orange, size: 32),
+                  const SizedBox(width: 12),
+                  const Text('¡Aviso!', style: TextStyle(fontWeight: FontWeight.bold)),
+                ],
+              ),
+              content: Text(
+                state.mensaje,
+                style: const TextStyle(fontSize: 16),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(ctx).pop(),
+                  child: const Text('Entendido', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                ),
+              ],
+            ),
           );
         } else if (state is JuegoEnProgreso) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('¡Tablero listo! Fase 1 completada.'), backgroundColor: Colors.green),
+          showDialog(
+            context: context,
+            builder: (ctx) => AlertDialog(
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+              title: Row(
+                children: [
+                  const Icon(Icons.check_circle_outline, color: Colors.green, size: 32),
+                  const SizedBox(width: 12),
+                  const Text('¡Excelente!', style: TextStyle(fontWeight: FontWeight.bold)),
+                ],
+              ),
+              content: const Text(
+                '¡Tablero listo! Fase 1 completada con éxito.',
+                style: TextStyle(fontSize: 16),
+              ),
+              actions: [
+                ElevatedButton(
+                  onPressed: () => Navigator.of(ctx).pop(),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.green,
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                  child: const Text('¡A jugar!', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                ),
+              ],
+            ),
           );
         }
       },

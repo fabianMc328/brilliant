@@ -45,22 +45,17 @@ class JuegoBloc extends Bloc<JuegoEvento, JuegoEstado> {
         return;
       }
 
-      // 3. Validar que el número no se haya usado ya en otra casilla
-      if (estadoActual.valoresColocados.containsValue(event.valor)) {
-        // Permitimos reasignar la misma coordenada
-        final coordenadaExistente = estadoActual.valoresColocados.entries
+      // 3. Si el número ya fue usado en otra coordenada, lo quitamos de esa coordenada antigua
+      final nuevosValores = Map<Coordenada, int>.from(estadoActual.valoresColocados);
+      
+      if (nuevosValores.containsValue(event.valor)) {
+        final coordenadaExistente = nuevosValores.entries
             .firstWhere((e) => e.value == event.valor)
             .key;
-            
-        if (coordenadaExistente != event.coordenada) {
-          emit(JuegoError("El número ${event.valor} ya fue colocado en otra casilla.", estadoActual));
-          emit(estadoActual);
-          return;
-        }
+        nuevosValores.remove(coordenadaExistente);
       }
 
-      // 4. Todo es válido, actualizamos el mapa
-      final nuevosValores = Map<Coordenada, int>.from(estadoActual.valoresColocados);
+      // 4. Todo es válido, asignamos a la nueva coordenada
       nuevosValores[event.coordenada] = event.valor;
 
       emit(estadoActual.copiarCon(valoresColocados: nuevosValores));
