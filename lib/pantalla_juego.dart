@@ -121,6 +121,49 @@ class _PantallaJuegoState extends State<PantallaJuego> {
     );
   }
 
+  void _mostrarMensajeNoHabilitada(BuildContext context, Offset position) {
+    final overlay = Overlay.of(context);
+    late OverlayEntry overlayEntry;
+
+    overlayEntry = OverlayEntry(
+      builder: (context) {
+        // Calcular posicion evitando que se salga de la pantalla
+        final screenWidth = MediaQuery.of(context).size.width;
+        double leftPos = position.dx - 100;
+        if (leftPos < 10) leftPos = 10;
+        if (leftPos + 200 > screenWidth - 10) leftPos = screenWidth - 210;
+
+        return Positioned(
+          top: position.dy - 50,
+          left: leftPos,
+          child: Material(
+            color: Colors.transparent,
+            child: Container(
+              width: 200,
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              decoration: BoxDecoration(
+                color: Colors.black.withOpacity(0.8),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: const Text(
+                'Favor leer las instrucciones, esta casilla no está habilitada aún.',
+                style: TextStyle(color: Colors.white, fontSize: 12),
+                textAlign: TextAlign.center,
+              ),
+            ),
+          ),
+        );
+      },
+    );
+
+    overlay.insert(overlayEntry);
+    Future.delayed(const Duration(seconds: 1), () {
+      if (overlayEntry.mounted) {
+        overlayEntry.remove();
+      }
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     return BlocConsumer<JuegoBloc, JuegoEstado>(
@@ -222,7 +265,7 @@ class _PantallaJuegoState extends State<PantallaJuego> {
                         const SizedBox(width: 16),
                         Expanded(
                           child: Text(
-                            'Fase 1: Toca las estrellas para asignar los números del 1 al 6 sin repetirlos.',
+                            'Fase 1 (Fase Inicial): Coloca los números iniciales con los que empezarás a jugar. Toca las estrellas para asignar los números del 1 al 6 sin repetirlos.',
                             style: TextStyle(
                               fontSize: 15,
                               color: Colors.blue.shade900,
@@ -267,9 +310,13 @@ class _PantallaJuegoState extends State<PantallaJuego> {
                       }
 
                       return GestureDetector(
-                        onTap: (esInicial && estadoInicial != null) 
-                            ? () => _alTocarCasilla(context, coord, estadoInicial!) 
-                            : null,
+                        onTapDown: (details) {
+                          if (esInicial && estadoInicial != null) {
+                            _alTocarCasilla(context, coord, estadoInicial!);
+                          } else if (!esInicial && state is! JuegoEnProgreso) {
+                            _mostrarMensajeNoHabilitada(context, details.globalPosition);
+                          }
+                        },
                         child: Stack(
                           alignment: Alignment.center,
                           children: [
