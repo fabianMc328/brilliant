@@ -2,6 +2,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:brilliant/tablero.dart';
 import 'package:brilliant/region.dart';
 import 'package:brilliant/tipo.dart'; // Para poder usar TipoAzul, TipoAmarillo, etc.
+import 'package:brilliant/nivel1_tablero.dart';
 
 void main() {
   group('Pruebas del Tablero y Regiones', () {
@@ -99,6 +100,66 @@ void main() {
       
       // Asegurarnos de que el valor no cambió y sigue siendo 2
       expect(tablero.celdas[const Coordenada(0, 0)]?.valor, 2);
+    });
+
+    test('Nivel1Config: El tablero oficial de Nivel 1 debe tener 49 casillas y 9 regiones', () {
+      final tablero = Nivel1Config.crearTablero();
+      expect(tablero.celdas.length, 49);
+      expect(tablero.regiones.length, 9);
+
+      // Verificar que las 6 casillas iniciales existan
+      for (final coord in Nivel1Config.casillasIniciales) {
+        expect(tablero.celdas.containsKey(coord), isTrue);
+      }
+    });
+
+    test('obtenerPosiblesLugaresParaAncla: Sólo ilumina vecinos ortogonales válidos según la región', () {
+      final tablero = Nivel1Config.crearTablero();
+      // Casilla (1, 2) es Azul (id: azul_1). Sus vecinos son: (0, 2)[Azul], (2, 2)[Rojo], (1, 1)[Verde], (1, 3)[Azul]
+      // Si colocamos un 5 en (1, 2):
+      tablero.celdas[const Coordenada(1, 2)]?.valor = 5;
+
+      // Si queremos colocar un 5 adyacente a esa ancla:
+      // - (0, 2) [Azul]: acepta 5 (todos iguales) -> Válido
+      // - (1, 3) [Azul]: acepta 5 (todos iguales) -> Válido
+      // - (1, 1) [Verde]: acepta cualquier número (5) -> Válido
+      // - (2, 2) [Rojo]: acepta 5 (todos distintos) -> Válido
+      final lugaresPara5 = tablero.obtenerPosiblesLugaresParaAncla(const Coordenada(1, 2), 5);
+      expect(lugaresPara5.contains(const Coordenada(0, 2)), isTrue);
+      expect(lugaresPara5.contains(const Coordenada(1, 3)), isTrue);
+      expect(lugaresPara5.contains(const Coordenada(1, 1)), isTrue);
+      expect(lugaresPara5.contains(const Coordenada(2, 2)), isTrue);
+
+      // Ahora colocamos un 2 en la casilla vecina (0, 2)[Azul] para probar restricción de TipoAzul
+      tablero.celdas[const Coordenada(0, 2)]?.valor = null; // la dejamos vacía
+      tablero.celdas[const Coordenada(1, 3)]?.valor = 5; // ocupada con 5
+
+      // Si intentamos colocar un 3 en (0, 2)[Azul], debe rechazarse porque la región Azul ya tiene un 5
+      final lugaresPara3 = tablero.obtenerPosiblesLugaresParaAncla(const Coordenada(1, 2), 3);
+      expect(lugaresPara3.contains(const Coordenada(0, 2)), isFalse,
+          reason: 'TipoAzul no permite 3 porque la región ya contiene un 5');
+    });
+
+    test('Cálculo de puntuación: Suma puntos correctos al completar regiones', () {
+      final tablero = Nivel1Config.crearTablero();
+      final regionAzul1 = tablero.regiones.firstWhere((r) => r.id == 'azul_1');
+
+      // Inicialmente no está completa
+      expect(tablero.esRegionCompleta(regionAzul1), isFalse);
+
+      // Llenamos todas las casillas de regionAzul1 con el número 4
+      for (final coord in regionAzul1.coordenadas) {
+        tablero.celdas[coord]?.valor = 4;
+      }
+
+      expect(tablero.esRegionCompleta(regionAzul1), isTrue);
+
+      // Calcular puntuación con azul_1 completada (debe ser 7 pts para la 1ª región azul)
+      final puntos = tablero.calcularPuntuacionTotal(['azul_1']);
+      expect(puntos, 7);
+
+      final desglose = tablero.calcularDesglosePuntos(['azul_1']);
+      expect(desglose['azul_1'], 7);
     });
 
   });

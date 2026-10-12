@@ -1,7 +1,12 @@
 import 'dart:ui';
-
 import 'reglas.dart';
 
+/// Abstracción que define el tipo de una zona en el tablero de Brilliant.
+///
+/// Principios SOLID:
+/// - Open/Closed (OCP): Abierto a nuevos tipos de regiones sin modificar la estructura del juego.
+/// - Single Responsibility (SRP): Define metadatos de la región (color, descripción, tabla de puntuación)
+///   y delega la validación de colocación a las funciones de dominio en `reglas.dart`.
 abstract class Tipo {
   Color get color;
   String get descripcion;
@@ -18,20 +23,18 @@ class TipoAzul extends Tipo {
   String get descripcion => 'Todos los números deben de ser iguales';
 
   @override
-  bool esPosibleAgregar(List<int> actuales, int posible) {
-    return actuales.isEmpty || actuales.every((element) => element == posible);
-  }
+  bool esPosibleAgregar(List<int> actuales, int posible) =>
+      todosIgualesAlInsertar(actuales, posible);
 
   @override
-  Map<int, int> get puntuaciones => {
+  Map<int, int> get puntuaciones => const {
         1: 7,
         2: 5,
         3: 3,
       };
 }
 
-/// Morado: usa la regla que ya tenías probada en reglas.dart (AreaMorada) —
-/// como máximo 2 valores distintos en la región.
+/// Morado: como máximo 2 valores distintos en la región.
 class TipoMorado extends Tipo {
   @override
   Color get color => const Color(0xFF8E24AA);
@@ -41,38 +44,38 @@ class TipoMorado extends Tipo {
       'Puede haber como máximo 2 valores distintos en la región';
 
   @override
-  bool esPosibleAgregar(List<int> actuales, int posible) {
-    return AreaMorada(actuales, posible);
-  }
+  bool esPosibleAgregar(List<int> actuales, int posible) =>
+      areaMorada(actuales, posible);
 
   @override
-  Map<int, int> get puntuaciones => {
+  Map<int, int> get puntuaciones => const {
         1: 7,
         2: 5,
         3: 3,
       };
 }
 
+/// Verde: puede ser cualquier número.
 class TipoVerde extends Tipo {
   @override
   Color get color => const Color(0xFF43A047);
 
   @override
-  String get descripcion => 'puede ser cualquier numero';
+  String get descripcion => 'Puede ser cualquier número';
 
   @override
-  bool esPosibleAgregar(List<int> actuales, int posible) {
-    return true;
-  }
+  bool esPosibleAgregar(List<int> actuales, int posible) =>
+      cualquierNumeroAlInsertar(actuales, posible);
 
   @override
-  Map<int, int> get puntuaciones => {
+  Map<int, int> get puntuaciones => const {
         1: 4,
         2: 3,
         3: 2,
       };
 }
 
+/// Amarillo: todos los números deben ser distintos.
 class TipoAmarillo extends Tipo {
   @override
   Color get color => const Color(0xFFFFC107);
@@ -81,18 +84,18 @@ class TipoAmarillo extends Tipo {
   String get descripcion => 'Todos los números deben de ser distintos';
 
   @override
-  bool esPosibleAgregar(List<int> actuales, int posible) {
-    return actuales.isEmpty || actuales.every((element) => element != posible);
-  }
+  bool esPosibleAgregar(List<int> actuales, int posible) =>
+      todosDiferentesAlInsertar(actuales, posible);
 
   @override
-  Map<int, int> get puntuaciones => {
+  Map<int, int> get puntuaciones => const {
         1: 8,
         2: 6,
         3: 4,
       };
 }
 
+/// Rojo: todos los números deben ser distintos.
 class TipoRojo extends Tipo {
   @override
   Color get color => const Color(0xFFF44336);
@@ -101,10 +104,13 @@ class TipoRojo extends Tipo {
   String get descripcion => 'Todos los números deben de ser distintos';
 
   @override
-  bool esPosibleAgregar(List<int> actuales, int posible) {
-    return actuales.isEmpty || actuales.every((element) => element != posible);
-  }
+  bool esPosibleAgregar(List<int> actuales, int posible) =>
+      todosDiferentesAlInsertar(actuales, posible);
 
   @override
-  Map<int, int> get puntuaciones => {1: 8, 2: 6, 3: 4};
+  Map<int, int> get puntuaciones => const {
+        1: 8,
+        2: 6,
+        3: 4,
+      };
 }

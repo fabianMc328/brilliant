@@ -9,6 +9,6 @@ void main() {
     await tester.pumpWidget(const AplicacionBrilliant());
 
     // Comprueba que el título de la barra superior se muestre
-    expect(find.text('Boceto de Casilla - Brilliant'), findsOneWidget);
+    expect(find.text('Brilliant - Nivel 1'), findsOneWidget);
   });
 }
