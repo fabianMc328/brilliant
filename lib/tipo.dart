@@ -1,12 +1,7 @@
 import 'dart:ui';
 import 'reglas.dart';
 
-/// Abstracción que define el tipo de una zona en el tablero de Brilliant.
-///
-/// Principios SOLID:
-/// - Open/Closed (OCP): Abierto a nuevos tipos de regiones sin modificar la estructura del juego.
-/// - Single Responsibility (SRP): Define metadatos de la región (color, descripción, tabla de puntuación)
-///   y delega la validación de colocación a las funciones de dominio en `reglas.dart`.
+// Define el color, las reglas y los puntos de cada zona del tablero.
 abstract class Tipo {
   Color get color;
   String get descripcion;

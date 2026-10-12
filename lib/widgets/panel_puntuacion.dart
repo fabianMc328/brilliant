@@ -2,8 +2,7 @@ import 'package:flutter/material.dart';
 import '../juego_estado.dart';
 import '../tipo.dart';
 
-/// Widget de presentación (SRP): Renderiza exclusivamente el marcador de
-/// puntuación total, el contador de turno y el desglose de progreso por región.
+// Muestra los puntos acumulados, el turno actual y el avance por color.
 class PanelPuntuacion extends StatelessWidget {
   final JuegoEnProgreso state;
 
@@ -111,6 +110,7 @@ class PanelPuntuacion extends StatelessWidget {
                         ),
                         Text(
                           '${state.puntuacionTotal} pts',
+                          key: const Key('texto_puntuacion_total'),
                           style: TextStyle(
                             fontSize: 22,
                             fontWeight: FontWeight.w900,
@@ -135,6 +135,7 @@ class PanelPuntuacion extends StatelessWidget {
                       const SizedBox(width: 4),
                       Text(
                         'Turno ${state.turno}',
+                        key: const Key('texto_turno'),
                         style: TextStyle(
                           fontSize: 14,
                           fontWeight: FontWeight.bold,

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-/// Modal desacoplado (SRP) para seleccionar un número del 1 al 6 en la Fase Inicial.
+// Menú para elegir un número del 1 al 6 al inicio.
 class SelectorValorInicialSheet extends StatelessWidget {
   final int? valorActual;
   final ValueChanged<int> onNumeroSeleccionado;
@@ -32,6 +32,7 @@ class SelectorValorInicialSheet extends StatelessWidget {
               final seleccionado = valorActual == numero;
 
               return InkWell(
+                key: ValueKey('opcion_numero_$numero'),
                 onTap: () {
                   onNumeroSeleccionado(numero);
                   Navigator.pop(context);

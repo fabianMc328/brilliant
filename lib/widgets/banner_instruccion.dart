@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
 import '../juego_estado.dart';
 
-/// Widget de presentación (SRP): Renderiza el mensaje de guía contextuada
-/// según la fase y estado actual de la ronda.
+// Muestra la cajita con el mensaje de ayuda según el turno.
 class BannerInstruccion extends StatelessWidget {
   final JuegoEnProgreso state;
 
@@ -47,6 +46,7 @@ class BannerInstruccion extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 4.0),
       child: Container(
+        key: const Key('banner_instruccion'),
         width: double.infinity,
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
         decoration: BoxDecoration(

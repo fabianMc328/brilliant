@@ -238,6 +238,7 @@ class _PantallaJuegoState extends State<PantallaJuego> {
                         }
 
                         return GestureDetector(
+                          key: ValueKey('casilla_${fila}_${columna}'),
                           onTapDown: (details) {
                             if (esInicial && estadoInicial != null) {
                               _abrirSelectorValorInicial(
@@ -280,6 +281,7 @@ class _PantallaJuegoState extends State<PantallaJuego> {
                     spacing: 8,
                     children: [
                       ElevatedButton.icon(
+                        key: const Key('boton_limpiar'),
                         onPressed: valoresActuales.isNotEmpty
                             ? () => context
                                 .read<JuegoBloc>()
@@ -300,6 +302,7 @@ class _PantallaJuegoState extends State<PantallaJuego> {
                         ),
                       ),
                       ElevatedButton.icon(
+                        key: const Key('boton_aleatorio'),
                         onPressed: () => context
                             .read<JuegoBloc>()
                             .add(LlenarValoresAleatorios()),
@@ -321,6 +324,7 @@ class _PantallaJuegoState extends State<PantallaJuego> {
                   ),
                   const SizedBox(height: 10),
                   ElevatedButton.icon(
+                    key: const Key('boton_comenzar_nivel'),
                     onPressed: listoParaAvanzar
                         ? () => context.read<JuegoBloc>().add(AvanzarJuego())
                         : null,
@@ -412,6 +416,7 @@ class _PantallaJuegoState extends State<PantallaJuego> {
                                 : EstadoCasilla.usado);
 
                         return GestureDetector(
+                          key: ValueKey('casilla_${fila}_${columna}'),
                           onTapDown: (details) {
                             if (esLugarValido) {
                               context

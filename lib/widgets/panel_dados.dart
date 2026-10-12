@@ -2,8 +2,7 @@ import 'package:flutter/material.dart';
 import '../juego_estado.dart';
 import '../widget_dado.dart';
 
-/// Widget de presentación e interacción (SRP): Contiene los 2 dados
-/// y los botones de acción para el turno del jugador.
+// Panel inferior con los dos dados y los botones de tirar o pasar.
 class PanelDados extends StatelessWidget {
   final JuegoEnProgreso state;
   final VoidCallback onTirarDados;
@@ -49,6 +48,7 @@ class PanelDados extends StatelessWidget {
                 Column(
                   children: [
                     WidgetDado(
+                      key: const Key('dado_1'),
                       valor: state.dado1,
                       esNumeroAColocar: dado1EsNumeroAColocar,
                       tamano: 54,
@@ -70,6 +70,7 @@ class PanelDados extends StatelessWidget {
                 Column(
                   children: [
                     WidgetDado(
+                      key: const Key('dado_2'),
                       valor: state.dado2,
                       esNumeroAColocar: dado2EsNumeroAColocar,
                       tamano: 54,
@@ -95,6 +96,7 @@ class PanelDados extends StatelessWidget {
               children: [
                 if (state.anclaSeleccionada != null)
                   TextButton.icon(
+                    key: const Key('boton_cancelar_ancla'),
                     onPressed: onCancelarAncla,
                     icon: const Icon(Icons.close, size: 18),
                     label: const Text('Cancelar ancla'),
@@ -104,6 +106,7 @@ class PanelDados extends StatelessWidget {
                   ),
                 if (!state.hayJugadasDisponibles)
                   ElevatedButton.icon(
+                    key: const Key('boton_pasar_turno'),
                     onPressed: onPasarTurno,
                     icon: const Icon(Icons.skip_next, size: 18),
                     label: const Text('Pasar Turno'),
@@ -118,6 +121,7 @@ class PanelDados extends StatelessWidget {
                   )
                 else
                   ElevatedButton.icon(
+                    key: const Key('boton_tirar_dados'),
                     onPressed: onTirarDados,
                     icon: const Icon(Icons.casino, size: 20),
                     label: const Text('Tirar Dados'),
