@@ -63,5 +63,21 @@ void main() {
         expect(cualquierNumeroAlInsertar([5, 5], 5), isTrue);
       });
     });
+
+    group('Naranja (número en rango [min, max])', () {
+      test('Acepta números dentro del rango 1 a 3', () {
+        expect(numeroEnRangoAlInsertar([], 1, 1, 3), isTrue);
+        expect(numeroEnRangoAlInsertar([1, 2], 3, 1, 3), isTrue);
+        expect(numeroEnRangoAlInsertar([], 4, 1, 3), isFalse);
+        expect(numeroEnRangoAlInsertar([], 6, 1, 3), isFalse);
+      });
+
+      test('Acepta números dentro del rango 4 a 6', () {
+        expect(numeroEnRangoAlInsertar([], 4, 4, 6), isTrue);
+        expect(numeroEnRangoAlInsertar([4], 6, 4, 6), isTrue);
+        expect(numeroEnRangoAlInsertar([], 1, 4, 6), isFalse);
+        expect(numeroEnRangoAlInsertar([], 3, 4, 6), isFalse);
+      });
+    });
   });
 }

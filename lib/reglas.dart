@@ -32,3 +32,8 @@ bool AreaMorada(List<int> lista, int numeroAInsertar) =>
 bool cualquierNumeroAlInsertar(List<int> lista, int numeroAInsertar) {
   return true;
 }
+
+// Checa que el número caiga entre el mínimo y el máximo.
+bool numeroEnRangoAlInsertar(List<int> lista, int numeroAInsertar, int min, int max) {
+  return numeroAInsertar >= min && numeroAInsertar <= max;
+}

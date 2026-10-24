@@ -43,5 +43,34 @@ void main() {
       expect(tipo.esPosibleAgregar([5], 6), isTrue);
       expect(tipo.esPosibleAgregar([5], 5), isFalse);
     });
+
+    test('TipoGris tiene su color y puntos (3, 2, 1) y regla todos iguales', () {
+      final tipo = TipoGris();
+      expect(tipo.color, const Color(0xFF94A3B8));
+      expect(tipo.puntuaciones, {1: 3, 2: 2, 3: 1});
+      expect(tipo.esPosibleAgregar([2], 2), isTrue);
+      expect(tipo.esPosibleAgregar([2], 3), isFalse);
+    });
+
+    test('TipoNaranja1a3 valida rango 1 a 3 y puntos (6, 4, 3)', () {
+      final tipo = TipoNaranja1a3();
+      expect(tipo.color, const Color(0xFFF97316));
+      expect(tipo.puntuaciones, {1: 6, 2: 4, 3: 3});
+      expect(tipo.esPosibleAgregar([], 2), isTrue);
+      expect(tipo.esPosibleAgregar([], 4), isFalse);
+    });
+
+    test('TipoNaranja4a6 valida rango 4 a 6 y puntos (6, 4, 3)', () {
+      final tipo = TipoNaranja4a6();
+      expect(tipo.color, const Color(0xFFEA580C));
+      expect(tipo.puntuaciones, {1: 6, 2: 4, 3: 3});
+      expect(tipo.esPosibleAgregar([], 5), isTrue);
+      expect(tipo.esPosibleAgregar([], 2), isFalse);
+    });
+
+    test('Soporta puntuaciones personalizadas por nivel', () {
+      final moradoCustom = TipoMorado(const {1: 6, 2: 4, 3: 2});
+      expect(moradoCustom.puntuaciones, {1: 6, 2: 4, 3: 2});
+    });
   });
 }
