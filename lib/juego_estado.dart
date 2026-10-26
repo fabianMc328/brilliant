@@ -1,77 +1,59 @@
+import 'niveles/catalogo_niveles.dart';
+import 'niveles/nivel_definicion.dart';
 import 'region.dart';
 import 'tablero.dart';
 
 abstract class JuegoEstado {}
 
-/// Estado inicial antes de cargar el tablero
+// Antes de empezar nada.
 class JuegoSinIniciar extends JuegoEstado {}
 
-/// Fase 1: Inicialización
-/// El jugador debe colocar los números del 1 al 6 en las casillas iniciales.
+// Fase 1: llenando las estrellas iniciales.
 class JuegoEsperandoValoresIniciales extends JuegoEstado {
-  /// Las 6 coordenadas que son iniciales en el tablero.
   final List<Coordenada> casillasInciales;
-
-  /// Los valores que el jugador ha colocado hasta ahora (Coordenada -> valor).
   final Map<Coordenada, int> valoresColocados;
+  final NivelDefinicion nivel;
 
   JuegoEsperandoValoresIniciales({
     required this.casillasInciales,
     this.valoresColocados = const {},
-  });
+    NivelDefinicion? nivel,
+  }) : nivel = nivel ?? CatalogoNiveles.nivel1;
 
-  bool get listosParaAvanzar => valoresColocados.length == casillasInciales.length;
+  bool get listosParaAvanzar =>
+      valoresColocados.length == casillasInciales.length;
 
   JuegoEsperandoValoresIniciales copiarCon({
     Map<Coordenada, int>? valoresColocados,
+    NivelDefinicion? nivel,
   }) {
     return JuegoEsperandoValoresIniciales(
       casillasInciales: casillasInciales,
       valoresColocados: valoresColocados ?? this.valoresColocados,
+      nivel: nivel ?? this.nivel,
     );
   }
 }
 
-/// Fase 2: El juego ha comenzado (Roll & Write con dados y anclas)
+// Fase 2: jugando con dados y anclas.
 class JuegoEnProgreso extends JuegoEstado {
-  /// Instancia del tablero con todas las celdas y regiones.
   final Tablero tablero;
-
-  /// Valor del primer dado tirado (1-6)
+  final NivelDefinicion nivel;
   final int dado1;
-
-  /// Valor del segundo dado tirado (1-6)
   final int dado2;
-
-  /// Coordenada del tablero seleccionada como ancla
   final Coordenada? anclaSeleccionada;
-
-  /// El número a colocar (determinado por el otro dado)
   final int? numeroAColocar;
-
-  /// Conjunto de coordenadas de casillas adyacentes válidas iluminadas
   final Set<Coordenada> casillasValidas;
-
-  /// Puntuación total acumulada
   final int puntuacionTotal;
-
-  /// IDs de las regiones completadas (en orden cronológico)
   final List<String> regionesCompletadasIds;
-
-  /// Desglose de puntos por cada región completada
   final Map<String, int> desglosePuntos;
-
-  /// Contador de turnos jugados
   final int turno;
-
-  /// Mensaje descriptivo o de feedback temporal
   final String? mensajeFeedback;
-
-  /// Si existe al menos una colocación válida en el tablero con la tirada actual
   final bool hayJugadasDisponibles;
 
   JuegoEnProgreso({
     required this.tablero,
+    NivelDefinicion? nivel,
     required this.dado1,
     required this.dado2,
     this.anclaSeleccionada,
@@ -83,9 +65,9 @@ class JuegoEnProgreso extends JuegoEstado {
     this.turno = 1,
     this.mensajeFeedback,
     this.hayJugadasDisponibles = true,
-  });
+  }) : nivel = nivel ?? CatalogoNiveles.nivel1;
 
-  /// Getter compatible para obtener todos los valores colocados en el tablero
+  // Regresa los números que ya están puestos en el tablero.
   Map<Coordenada, int> get valoresColocados {
     final mapa = <Coordenada, int>{};
     for (final entry in tablero.celdas.entries) {
@@ -96,8 +78,7 @@ class JuegoEnProgreso extends JuegoEstado {
     return mapa;
   }
 
-  /// Retorna las coordenadas del tablero que son elegibles para ser anclas
-  /// (aquellas que ya tienen un número que coincide con dado1 o dado2)
+  // Casillas que tienen un número igual a alguno de los dados.
   Set<Coordenada> get anclasElegibles {
     final elegibles = <Coordenada>{};
     for (final entry in tablero.celdas.entries) {
@@ -111,6 +92,7 @@ class JuegoEnProgreso extends JuegoEstado {
 
   JuegoEnProgreso copiarCon({
     Tablero? tablero,
+    NivelDefinicion? nivel,
     int? dado1,
     int? dado2,
     Coordenada? anclaSeleccionada,
@@ -128,22 +110,29 @@ class JuegoEnProgreso extends JuegoEstado {
   }) {
     return JuegoEnProgreso(
       tablero: tablero ?? this.tablero,
+      nivel: nivel ?? this.nivel,
       dado1: dado1 ?? this.dado1,
       dado2: dado2 ?? this.dado2,
-      anclaSeleccionada: limpiarAncla ? null : (anclaSeleccionada ?? this.anclaSeleccionada),
-      numeroAColocar: limpiarNumeroAColocar ? null : (numeroAColocar ?? this.numeroAColocar),
+      anclaSeleccionada:
+          limpiarAncla ? null : (anclaSeleccionada ?? this.anclaSeleccionada),
+      numeroAColocar: limpiarNumeroAColocar
+          ? null
+          : (numeroAColocar ?? this.numeroAColocar),
       casillasValidas: casillasValidas ?? this.casillasValidas,
       puntuacionTotal: puntuacionTotal ?? this.puntuacionTotal,
-      regionesCompletadasIds: regionesCompletadasIds ?? this.regionesCompletadasIds,
+      regionesCompletadasIds:
+          regionesCompletadasIds ?? this.regionesCompletadasIds,
       desglosePuntos: desglosePuntos ?? this.desglosePuntos,
       turno: turno ?? this.turno,
-      mensajeFeedback: limpiarFeedback ? null : (mensajeFeedback ?? this.mensajeFeedback),
-      hayJugadasDisponibles: hayJugadasDisponibles ?? this.hayJugadasDisponibles,
+      mensajeFeedback:
+          limpiarFeedback ? null : (mensajeFeedback ?? this.mensajeFeedback),
+      hayJugadasDisponibles:
+          hayJugadasDisponibles ?? this.hayJugadasDisponibles,
     );
   }
 }
 
-/// Estado para mostrar errores
+// Para avisar de algún error.
 class JuegoError extends JuegoEstado {
   final String mensaje;
   final JuegoEstado estadoAnterior;

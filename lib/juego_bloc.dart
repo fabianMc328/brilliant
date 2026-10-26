@@ -3,7 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 
 import 'juego_evento.dart';
 import 'juego_estado.dart';
-import 'nivel1_tablero.dart';
+import 'niveles/catalogo_niveles.dart';
 import 'region.dart';
 import 'tablero.dart';
 
@@ -14,6 +14,7 @@ class JuegoBloc extends Bloc<JuegoEvento, JuegoEstado> {
       : _random = random ?? Random(),
         super(JuegoSinIniciar()) {
     on<IniciarConfiguracionInicial>(_onIniciarConfiguracion);
+    on<IniciarNivel>(_onIniciarNivel);
     on<ColocarValorInicial>(_onColocarValorInicial);
     on<LlenarValoresAleatorios>(_onLlenarValoresAleatorios);
     on<LimpiarValoresIniciales>(_onLimpiarValoresIniciales);
@@ -29,9 +30,22 @@ class JuegoBloc extends Bloc<JuegoEvento, JuegoEstado> {
     IniciarConfiguracionInicial event,
     Emitter<JuegoEstado> emit,
   ) {
+    final nivel = event.nivel ?? CatalogoNiveles.nivel1;
     emit(JuegoEsperandoValoresIniciales(
       casillasInciales: event.casillasInciales,
       valoresColocados: const {},
+      nivel: nivel,
+    ));
+  }
+
+  void _onIniciarNivel(
+    IniciarNivel event,
+    Emitter<JuegoEstado> emit,
+  ) {
+    emit(JuegoEsperandoValoresIniciales(
+      casillasInciales: event.nivel.casillasIniciales,
+      valoresColocados: const {},
+      nivel: event.nivel,
     ));
   }
 
@@ -42,23 +56,27 @@ class JuegoBloc extends Bloc<JuegoEvento, JuegoEstado> {
     if (state is JuegoEsperandoValoresIniciales) {
       final estadoActual = state as JuegoEsperandoValoresIniciales;
 
-      // 1. Validar que la coordenada enviada es una de las casillas inciales
+      // Revisa que sea una estrella válida.
       if (!estadoActual.casillasInciales.contains(event.coordenada)) {
-        emit(JuegoError("Solo puedes colocar valores iniciales en las casillas inciales.", estadoActual));
+        emit(JuegoError(
+            "Solo puedes colocar valores iniciales en las casillas inciales.",
+            estadoActual));
         emit(estadoActual);
         return;
       }
 
-      // 2. Validar que el valor esté entre 1 y 6
+      // Debe ser del 1 al 6.
       if (event.valor < 1 || event.valor > 6) {
-        emit(JuegoError("El valor inicial debe estar entre 1 y 6.", estadoActual));
+        emit(JuegoError(
+            "El valor inicial debe estar entre 1 y 6.", estadoActual));
         emit(estadoActual);
         return;
       }
 
-      // 3. Si el número ya fue usado en otra coordenada, lo quitamos de esa coordenada antigua
-      final nuevosValores = Map<Coordenada, int>.from(estadoActual.valoresColocados);
-      
+      // Si ya usamos el número en otra estrella, lo movemos acá.
+      final nuevosValores =
+          Map<Coordenada, int>.from(estadoActual.valoresColocados);
+
       if (nuevosValores.containsValue(event.valor)) {
         final coordenadaExistente = nuevosValores.entries
             .firstWhere((e) => e.value == event.valor)
@@ -66,7 +84,7 @@ class JuegoBloc extends Bloc<JuegoEvento, JuegoEstado> {
         nuevosValores.remove(coordenadaExistente);
       }
 
-      // 4. Todo es válido, asignamos a la nueva coordenada
+      // Guardamos el número en la casilla.
       nuevosValores[event.coordenada] = event.valor;
 
       emit(estadoActual.copiarCon(valoresColocados: nuevosValores));
@@ -79,15 +97,15 @@ class JuegoBloc extends Bloc<JuegoEvento, JuegoEstado> {
   ) {
     if (state is JuegoEsperandoValoresIniciales) {
       final estadoActual = state as JuegoEsperandoValoresIniciales;
-      
+
       final numeros = [1, 2, 3, 4, 5, 6];
       numeros.shuffle(_random);
-      
+
       final nuevosValores = <Coordenada, int>{};
       for (int i = 0; i < estadoActual.casillasInciales.length; i++) {
         nuevosValores[estadoActual.casillasInciales[i]] = numeros[i];
       }
-      
+
       emit(estadoActual.copiarCon(valoresColocados: nuevosValores));
     }
   }
@@ -109,20 +127,21 @@ class JuegoBloc extends Bloc<JuegoEvento, JuegoEstado> {
     if (state is JuegoEsperandoValoresIniciales) {
       final estadoActual = state as JuegoEsperandoValoresIniciales;
 
-      // Regla: Se deben haber colocado las 6 casillas iniciales
+      // No deja avanzar si faltan estrellas por llenar.
       if (!estadoActual.listosParaAvanzar) {
-        final faltantes = estadoActual.casillasInciales.length - estadoActual.valoresColocados.length;
+        final faltantes = estadoActual.casillasInciales.length -
+            estadoActual.valoresColocados.length;
         emit(JuegoError(
-            "Falta colocar $faltantes número(s) en las casillas inciales para poder empezar.", 
+            "Falta colocar $faltantes número(s) en las casillas inciales para poder empezar.",
             estadoActual));
         emit(estadoActual);
         return;
       }
 
-      // Inicializamos el Tablero de Nivel 1 con sus regiones y celdas
-      final tablero = Nivel1Config.crearTablero();
+      // Arma el tablero con las zonas del nivel elegido.
+      final tablero = estadoActual.nivel.crearTablero();
 
-      // Inyectamos los 6 valores iniciales en las celdas
+      // Pone los 6 números iniciales en el tablero.
       for (final entry in estadoActual.valoresColocados.entries) {
         final celda = tablero.celdas[entry.key];
         if (celda != null) {
@@ -130,13 +149,14 @@ class JuegoBloc extends Bloc<JuegoEvento, JuegoEstado> {
         }
       }
 
-      // Tiramos los primeros dos dados
+      // Primer tiro de dados.
       final d1 = _random.nextInt(6) + 1;
       final d2 = _random.nextInt(6) + 1;
       final hayJugadas = _hayJugadasPosibles(tablero, d1, d2);
 
       emit(JuegoEnProgreso(
         tablero: tablero,
+        nivel: estadoActual.nivel,
         dado1: d1,
         dado2: d2,
         hayJugadasDisponibles: hayJugadas,
@@ -187,15 +207,16 @@ class JuegoBloc extends Bloc<JuegoEvento, JuegoEstado> {
 
       final valorAncla = celda.valor!;
 
-      // Validar si el ancla coincide con dado1 o dado2
+      // Checa que el ancla coincida con alguno de los dos dados.
       if (valorAncla != actual.dado1 && valorAncla != actual.dado2) {
         emit(actual.copiarCon(
-          mensajeFeedback: 'El ancla seleccionada ($valorAncla) no coincide con los dados (${actual.dado1} o ${actual.dado2}).',
+          mensajeFeedback:
+              'El ancla seleccionada ($valorAncla) no coincide con los dados (${actual.dado1} o ${actual.dado2}).',
         ));
         return;
       }
 
-      // Si el ancla coincide con dado1, el número a colocar es dado2; si coincide con dado2, es dado1
+      // El otro dado es el número que vamos a poner.
       final int numeroAColocar;
       if (valorAncla == actual.dado1) {
         numeroAColocar = actual.dado2;
@@ -203,14 +224,17 @@ class JuegoBloc extends Bloc<JuegoEvento, JuegoEstado> {
         numeroAColocar = actual.dado1;
       }
 
-      // Buscamos los lugares ortogonales válidos donde se puede colocar el número
-      final validas = actual.tablero.obtenerPosiblesLugaresParaAncla(event.coordenada, numeroAColocar);
+      // Busca casillas vecinas donde sea legal meter el número.
+      final validas = actual.tablero
+          .obtenerPosiblesLugaresParaAncla(event.coordenada, numeroAColocar);
 
       String? feedback;
       if (validas.isEmpty) {
-        feedback = 'No hay casillas válidas para colocar el $numeroAColocar junto a esta ancla.';
+        feedback =
+            'No hay casillas válidas para colocar el $numeroAColocar junto a esta ancla.';
       } else {
-        feedback = 'Colocando el $numeroAColocar. Selecciona una casilla iluminada.';
+        feedback =
+            'Colocando el $numeroAColocar. Selecciona una casilla iluminada.';
       }
 
       emit(actual.copiarCon(
@@ -229,15 +253,17 @@ class JuegoBloc extends Bloc<JuegoEvento, JuegoEstado> {
     if (state is JuegoEnProgreso) {
       final actual = state as JuegoEnProgreso;
 
-      if (actual.numeroAColocar == null || !actual.casillasValidas.contains(event.coordenada)) {
+      if (actual.numeroAColocar == null ||
+          !actual.casillasValidas.contains(event.coordenada)) {
         emit(actual.copiarCon(
           mensajeFeedback: 'Selecciona una de las casillas iluminadas válidas.',
         ));
         return;
       }
 
-      // Colocamos el número en el tablero
-      final colocado = actual.tablero.colocarNumero(event.coordenada, actual.numeroAColocar!);
+      // Pone el número en la casilla elegida.
+      final colocado = actual.tablero
+          .colocarNumero(event.coordenada, actual.numeroAColocar!);
       if (!colocado) {
         emit(actual.copiarCon(
           mensajeFeedback: 'No se pudo colocar el número en esa casilla.',
@@ -245,22 +271,25 @@ class JuegoBloc extends Bloc<JuegoEvento, JuegoEstado> {
         return;
       }
 
-      // Verificamos si alguna región se acaba de completar
+      // Checa si se completó alguna región.
       final completadas = List<String>.from(actual.regionesCompletadasIds);
       String? avisoCompletada;
 
       for (final region in actual.tablero.regiones) {
-        if (!completadas.contains(region.id) && actual.tablero.esRegionCompleta(region)) {
+        if (!completadas.contains(region.id) &&
+            actual.tablero.esRegionCompleta(region)) {
           completadas.add(region.id);
           avisoCompletada = '¡Región completada con éxito! 🎉';
         }
       }
 
-      // Recalcular puntuación
-      final nuevaPuntuacion = actual.tablero.calcularPuntuacionTotal(completadas);
-      final nuevoDesglose = actual.tablero.calcularDesglosePuntos(completadas);
+      // Recalcula el puntaje acumulado.
+      final nuevaPuntuacion =
+          actual.tablero.calcularPuntuacionTotal(completadas);
+      final nuevoDesglose =
+          actual.tablero.calcularDesglosePuntos(completadas);
 
-      // Tiramos automáticamente los dados para el siguiente turno
+      // Tira dados nuevos pal siguiente turno.
       final nuevoD1 = _random.nextInt(6) + 1;
       final nuevoD2 = _random.nextInt(6) + 1;
       final hayJugadas = _hayJugadasPosibles(actual.tablero, nuevoD1, nuevoD2);
@@ -276,7 +305,8 @@ class JuegoBloc extends Bloc<JuegoEvento, JuegoEstado> {
         regionesCompletadasIds: completadas,
         desglosePuntos: nuevoDesglose,
         hayJugadasDisponibles: hayJugadas,
-        mensajeFeedback: avisoCompletada ?? '¡Número colocado! Nuevos dados tirados.',
+        mensajeFeedback:
+            avisoCompletada ?? '¡Número colocado! Nuevos dados tirados.',
       ));
     }
   }
@@ -319,18 +349,20 @@ class JuegoBloc extends Bloc<JuegoEvento, JuegoEstado> {
     }
   }
 
-  /// Verifica si existe al menos una colocación válida en el tablero para los dados dados
+  // Revisa si hay alguna jugada posible con estos dados.
   bool _hayJugadasPosibles(Tablero tablero, int d1, int d2) {
     for (final entry in tablero.celdas.entries) {
       final valor = entry.value.valor;
       if (valor == null) continue;
 
       if (valor == d1) {
-        final posibles = tablero.obtenerPosiblesLugaresParaAncla(entry.key, d2);
+        final posibles =
+            tablero.obtenerPosiblesLugaresParaAncla(entry.key, d2);
         if (posibles.isNotEmpty) return true;
       }
       if (valor == d2) {
-        final posibles = tablero.obtenerPosiblesLugaresParaAncla(entry.key, d1);
+        final posibles =
+            tablero.obtenerPosiblesLugaresParaAncla(entry.key, d1);
         if (posibles.isNotEmpty) return true;
       }
     }

@@ -1,15 +1,24 @@
+import 'niveles/nivel_definicion.dart';
 import 'region.dart';
 
 abstract class JuegoEvento {}
 
-/// Carga el tablero y define cuáles son las casillas inciales.
+// Arranca el juego con las estrellas del nivel.
 class IniciarConfiguracionInicial extends JuegoEvento {
   final List<Coordenada> casillasInciales;
+  final NivelDefinicion? nivel;
 
-  IniciarConfiguracionInicial(this.casillasInciales);
+  IniciarConfiguracionInicial(this.casillasInciales, {this.nivel});
 }
 
-/// El jugador coloca un número (del 1 al 6) en una casilla inicial.
+// Arranca directo pasándole el nivel.
+class IniciarNivel extends JuegoEvento {
+  final NivelDefinicion nivel;
+
+  IniciarNivel(this.nivel);
+}
+
+// Coloca un número del 1 al 6 en una estrella.
 class ColocarValorInicial extends JuegoEvento {
   final Coordenada coordenada;
   final int valor;
@@ -17,34 +26,34 @@ class ColocarValorInicial extends JuegoEvento {
   ColocarValorInicial(this.coordenada, this.valor);
 }
 
-/// Evento para pasar a la Fase 2 del juego ("Comenzar Nivel").
+// Pasa a la fase de tirar dados.
 class AvanzarJuego extends JuegoEvento {}
 
-/// Llena las 6 casillas iniciales con números del 1 al 6 de forma aleatoria.
+// Llena las 6 estrellas al azar.
 class LlenarValoresAleatorios extends JuegoEvento {}
 
-/// Limpia todos los valores colocados en las casillas iniciales.
+// Borra los números de las estrellas.
 class LimpiarValoresIniciales extends JuegoEvento {}
 
-/// Fase 2: Tirar los 2 dados.
+// Tira los 2 dados.
 class TirarDados extends JuegoEvento {}
 
-/// Fase 2: Seleccionar una casilla como ancla (debe coincidir con uno de los dados).
+// Elige una casilla como ancla.
 class SeleccionarAncla extends JuegoEvento {
   final Coordenada coordenada;
 
   SeleccionarAncla(this.coordenada);
 }
 
-/// Fase 2: Colocar el número en una de las casillas válidas iluminadas.
+// Pone el número en una casilla verde válida.
 class ColocarNumero extends JuegoEvento {
   final Coordenada coordenada;
 
   ColocarNumero(this.coordenada);
 }
 
-/// Fase 2: Deseleccionar el ancla activa actual.
+// Desmarca el ancla que teníamos elegida.
 class DeseleccionarAncla extends JuegoEvento {}
 
-/// Fase 2: Pasar turno cuando no hay jugadas o se decide no jugar.
+// Pasa el turno si no hay jugadas.
 class PasarTurno extends JuegoEvento {}
