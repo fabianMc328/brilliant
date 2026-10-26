@@ -25,9 +25,9 @@ class PanelDados extends StatelessWidget {
         state.anclaSeleccionada != null && state.numeroAColocar == state.dado2;
 
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+      padding: const EdgeInsets.symmetric(horizontal: 14.0, vertical: 6.0),
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(20),
@@ -44,20 +44,22 @@ class PanelDados extends StatelessWidget {
           children: [
             // Sección de Dados
             Row(
+              mainAxisSize: MainAxisSize.min,
               children: [
                 Column(
+                  mainAxisSize: MainAxisSize.min,
                   children: [
                     WidgetDado(
                       key: const Key('dado_1'),
                       valor: state.dado1,
                       esNumeroAColocar: dado1EsNumeroAColocar,
-                      tamano: 54,
+                      tamano: 48,
                     ),
-                    const SizedBox(height: 4),
+                    const SizedBox(height: 3),
                     Text(
                       dado1EsNumeroAColocar ? 'A colocar' : 'Dado 1',
                       style: TextStyle(
-                        fontSize: 11,
+                        fontSize: 10.5,
                         fontWeight: FontWeight.bold,
                         color: dado1EsNumeroAColocar
                             ? Colors.blue.shade700
@@ -66,20 +68,21 @@ class PanelDados extends StatelessWidget {
                     ),
                   ],
                 ),
-                const SizedBox(width: 14),
+                const SizedBox(width: 10),
                 Column(
+                  mainAxisSize: MainAxisSize.min,
                   children: [
                     WidgetDado(
                       key: const Key('dado_2'),
                       valor: state.dado2,
                       esNumeroAColocar: dado2EsNumeroAColocar,
-                      tamano: 54,
+                      tamano: 48,
                     ),
-                    const SizedBox(height: 4),
+                    const SizedBox(height: 3),
                     Text(
                       dado2EsNumeroAColocar ? 'A colocar' : 'Dado 2',
                       style: TextStyle(
-                        fontSize: 11,
+                        fontSize: 10.5,
                         fontWeight: FontWeight.bold,
                         color: dado2EsNumeroAColocar
                             ? Colors.blue.shade700
@@ -90,54 +93,68 @@ class PanelDados extends StatelessWidget {
                 ),
               ],
             ),
+            const SizedBox(width: 8),
 
-            // Sección de Botones de Acción
-            Row(
-              children: [
-                if (state.anclaSeleccionada != null)
-                  TextButton.icon(
-                    key: const Key('boton_cancelar_ancla'),
-                    onPressed: onCancelarAncla,
-                    icon: const Icon(Icons.close, size: 18),
-                    label: const Text('Cancelar ancla'),
-                    style: TextButton.styleFrom(
-                      foregroundColor: Colors.red.shade700,
-                    ),
-                  ),
-                if (!state.hayJugadasDisponibles)
-                  ElevatedButton.icon(
-                    key: const Key('boton_pasar_turno'),
-                    onPressed: onPasarTurno,
-                    icon: const Icon(Icons.skip_next, size: 18),
-                    label: const Text('Pasar Turno'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.orange.shade700,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 14,
-                        vertical: 12,
+            // Sección de Botones de Acción adaptativa
+            Flexible(
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                alignment: Alignment.centerRight,
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    if (state.anclaSeleccionada != null) ...[
+                      TextButton.icon(
+                        key: const Key('boton_cancelar_ancla'),
+                        onPressed: onCancelarAncla,
+                        icon: const Icon(Icons.close, size: 18),
+                        label: const Text('Cancelar ancla'),
+                        style: TextButton.styleFrom(
+                          foregroundColor: Colors.red.shade700,
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                        ),
                       ),
-                    ),
-                  )
-                else
-                  ElevatedButton.icon(
-                    key: const Key('boton_tirar_dados'),
-                    onPressed: onTirarDados,
-                    icon: const Icon(Icons.casino, size: 20),
-                    label: const Text('Tirar Dados'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.blue.shade700,
-                      foregroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(14),
+                      const SizedBox(width: 4),
+                    ],
+                    if (!state.hayJugadasDisponibles)
+                      ElevatedButton.icon(
+                        key: const Key('boton_pasar_turno'),
+                        onPressed: onPasarTurno,
+                        icon: const Icon(Icons.skip_next, size: 18),
+                        label: const Text('Pasar Turno'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.orange.shade700,
+                          foregroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 14,
+                            vertical: 10,
+                          ),
+                        ),
+                      )
+                    else
+                      ElevatedButton.icon(
+                        key: const Key('boton_tirar_dados'),
+                        onPressed: onTirarDados,
+                        icon: const Icon(Icons.casino, size: 18),
+                        label: const Text('Tirar Dados'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.blue.shade700,
+                          foregroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 14,
+                            vertical: 10,
+                          ),
+                        ),
                       ),
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 12,
-                      ),
-                    ),
-                  ),
-              ],
+                  ],
+                ),
+              ),
             ),
           ],
         ),

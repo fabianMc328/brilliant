@@ -122,7 +122,7 @@ class _TarjetaNivel extends StatelessWidget {
       onTap: onTap,
       borderRadius: BorderRadius.circular(20),
       child: Container(
-        padding: const EdgeInsets.all(14),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(20),
@@ -139,64 +139,74 @@ class _TarjetaNivel extends StatelessWidget {
           children: [
             // Mini mapa
             _MiniaturaTablero(nivel: nivel),
-            const SizedBox(width: 16),
+            const SizedBox(width: 12),
 
             // Info del nivel
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Row(
-                    children: [
-                      Text(
-                        nivel.nombre,
-                        style: const TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.w900,
-                          color: Color(0xFF0F172A),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 8, vertical: 2),
-                        decoration: BoxDecoration(
-                          color: colorDif.withValues(alpha: 0.15),
-                          borderRadius: BorderRadius.circular(8),
-                          border: Border.all(color: colorDif, width: 1),
-                        ),
-                        child: Text(
-                          nivel.dificultad,
-                          style: TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.w800,
-                            color: colorDif,
+                  FittedBox(
+                    fit: BoxFit.scaleDown,
+                    alignment: Alignment.centerLeft,
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          nivel.nombre,
+                          style: const TextStyle(
+                            fontSize: 17,
+                            fontWeight: FontWeight.w900,
+                            color: Color(0xFF0F172A),
                           ),
                         ),
-                      ),
-                    ],
+                        const SizedBox(width: 8),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 7, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: colorDif.withValues(alpha: 0.15),
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(color: colorDif, width: 1),
+                          ),
+                          child: Text(
+                            nivel.dificultad,
+                            style: TextStyle(
+                              fontSize: 10.5,
+                              fontWeight: FontWeight.w800,
+                              color: colorDif,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
-                  const SizedBox(height: 6),
+                  const SizedBox(height: 5),
                   Text(
                     nivel.descripcion,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
                     style: TextStyle(
-                      fontSize: 12.5,
+                      fontSize: 12,
                       color: Colors.blueGrey.shade700,
                       height: 1.25,
                     ),
                   ),
-                  const SizedBox(height: 8),
+                  const SizedBox(height: 6),
                   Row(
                     children: [
                       Icon(Icons.layers_outlined,
-                          size: 15, color: Colors.blueGrey.shade500),
+                          size: 14, color: Colors.blueGrey.shade500),
                       const SizedBox(width: 4),
-                      Text(
-                        '${nivel.regiones.length} regiones • 6 estrellas',
-                        style: TextStyle(
-                          fontSize: 11.5,
-                          fontWeight: FontWeight.w600,
-                          color: Colors.blueGrey.shade600,
+                      Expanded(
+                        child: Text(
+                          '${nivel.regiones.length} regiones • 6 estrellas',
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.blueGrey.shade600,
+                          ),
                         ),
                       ),
                     ],
@@ -204,6 +214,7 @@ class _TarjetaNivel extends StatelessWidget {
                 ],
               ),
             ),
+            const SizedBox(width: 8),
 
             // Botón para entrar al nivel
             ElevatedButton(
@@ -213,10 +224,10 @@ class _TarjetaNivel extends StatelessWidget {
                 backgroundColor: Colors.blue.shade700,
                 foregroundColor: Colors.white,
                 shape: const CircleBorder(),
-                padding: const EdgeInsets.all(12),
+                padding: const EdgeInsets.all(10),
                 elevation: 1,
               ),
-              child: const Icon(Icons.arrow_forward_rounded, size: 20),
+              child: const Icon(Icons.arrow_forward_rounded, size: 18),
             ),
           ],
         ),
@@ -236,9 +247,9 @@ class _MiniaturaTablero extends StatelessWidget {
     final tablero = nivel.crearTablero();
 
     return Container(
-      width: 72,
-      height: 72,
-      padding: const EdgeInsets.all(3),
+      width: 64,
+      height: 64,
+      padding: const EdgeInsets.all(2.5),
       decoration: BoxDecoration(
         color: Colors.blueGrey.shade50,
         borderRadius: BorderRadius.circular(10),
@@ -248,8 +259,8 @@ class _MiniaturaTablero extends StatelessWidget {
         physics: const NeverScrollableScrollPhysics(),
         gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
           crossAxisCount: 7,
-          crossAxisSpacing: 1.5,
-          mainAxisSpacing: 1.5,
+          crossAxisSpacing: 1.0,
+          mainAxisSpacing: 1.0,
         ),
         itemCount: 49,
         itemBuilder: (context, index) {
@@ -262,7 +273,7 @@ class _MiniaturaTablero extends StatelessWidget {
           return Container(
             decoration: BoxDecoration(
               color: color,
-              borderRadius: BorderRadius.circular(2),
+              borderRadius: BorderRadius.circular(1.5),
             ),
           );
         },

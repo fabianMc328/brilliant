@@ -16,6 +16,7 @@ import 'widgets/componentes_panel_test.dart' as componentes_panel_test;
 import 'widgets/pantalla_juego_test.dart' as pantalla_juego_test;
 import 'widgets/pantalla_seleccion_nivel_test.dart'
     as pantalla_seleccion_nivel_test;
+import 'widgets/responsivo_test.dart' as responsivo_test;
 
 // Corre todas las pruebas del juego juntas.
 void main() {
@@ -41,5 +42,6 @@ void main() {
     componentes_panel_test.main();
     pantalla_juego_test.main();
     pantalla_seleccion_nivel_test.main();
+    responsivo_test.main();
   });
 }

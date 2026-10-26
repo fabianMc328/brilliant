@@ -187,178 +187,208 @@ class _PantallaJuegoState extends State<PantallaJuego> {
             : null,
       ),
       body: SafeArea(
-        child: Column(
-          children: [
-            Padding(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 20.0, vertical: 8.0),
-              child: Container(
-                padding: const EdgeInsets.all(14),
-                decoration: BoxDecoration(
-                  color: Colors.blue.shade50,
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: Colors.blue.shade100, width: 1.5),
-                ),
-                child: Row(
-                  children: [
-                    Icon(Icons.lightbulb_outline,
-                        color: Colors.blue.shade700, size: 28),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Text(
-                        'Fase 1 (Inicialización): Toca las estrellas para colocar los números iniciales (anclas) del 1 al 6 sin repetirlos.',
-                        style: TextStyle(
-                          fontSize: 14,
-                          color: Colors.blue.shade900,
-                          fontWeight: FontWeight.w600,
-                          height: 1.25,
-                        ),
-                      ),
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final esPantallaBaja = constraints.maxHeight < 560;
+
+            final contenido = Column(
+              children: [
+                Padding(
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 14.0, vertical: 6.0),
+                  child: Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.blue.shade50,
+                      borderRadius: BorderRadius.circular(16),
+                      border:
+                          Border.all(color: Colors.blue.shade100, width: 1.5),
                     ),
-                  ],
-                ),
-              ),
-            ),
-            Expanded(
-              child: Center(
-                child: AspectRatio(
-                  aspectRatio: 1,
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 24.0, vertical: 8.0),
-                    child: GridView.builder(
-                      physics: const NeverScrollableScrollPhysics(),
-                      gridDelegate:
-                          const SliverGridDelegateWithFixedCrossAxisCount(
-                        crossAxisCount: 7,
-                        crossAxisSpacing: 5.0,
-                        mainAxisSpacing: 5.0,
-                      ),
-                      itemCount: 49,
-                      itemBuilder: (context, index) {
-                        final fila = index ~/ 7;
-                        final columna = index % 7;
-                        final coord = Coordenada(fila, columna);
-                        final esInicial = casillasIniciales.contains(coord);
-                        final valor = valoresActuales[coord];
-
-                        Widget? iconoEstrella;
-                        if (esInicial && valor == null) {
-                          iconoEstrella = const Icon(
-                            Icons.star_rounded,
-                            color: Colors.white70,
-                            size: 26,
-                          );
-                        }
-
-                        return GestureDetector(
-                          key: ValueKey('casilla_${fila}_$columna'),
-                          onTapDown: (details) {
-                            if (esInicial && estadoInicial != null) {
-                              _abrirSelectorValorInicial(
-                                  context, coord, estadoInicial);
-                            } else if (!esInicial) {
-                              _mostrarToast(
-                                context,
-                                details.globalPosition,
-                                'Casilla no habilitada aún. Toca una estrella.',
-                              );
-                            }
-                          },
-                          child: Stack(
-                            alignment: Alignment.center,
-                            children: [
-                              CasillaJuego(
-                                colorBase: coloresTablero[fila][columna],
-                                estado: valor != null
-                                    ? EstadoCasilla.usado
-                                    : EstadoCasilla.sinUsar,
-                                valor: valor,
-                              ),
-                              if (iconoEstrella != null) iconoEstrella,
-                            ],
+                    child: Row(
+                      children: [
+                        Icon(Icons.lightbulb_outline,
+                            color: Colors.blue.shade700, size: 24),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Text(
+                            'Fase 1 (Inicialización): Toca las estrellas para colocar los números iniciales (anclas) del 1 al 6 sin repetirlos.',
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: Colors.blue.shade900,
+                              fontWeight: FontWeight.w600,
+                              height: 1.25,
+                            ),
                           ),
-                        );
-                      },
+                        ),
+                      ],
                     ),
                   ),
                 ),
-              ),
-            ),
-            Padding(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
-              child: Column(
-                children: [
-                  Wrap(
-                    alignment: WrapAlignment.center,
-                    spacing: 8,
-                    children: [
-                      ElevatedButton.icon(
-                        key: const Key('boton_limpiar'),
-                        onPressed: valoresActuales.isNotEmpty
-                            ? () => context
-                                .read<JuegoBloc>()
-                                .add(LimpiarValoresIniciales())
-                            : null,
-                        icon: const Icon(Icons.delete_outline, size: 20),
-                        label: const Text('Limpiar'),
-                        style: ElevatedButton.styleFrom(
-                          foregroundColor: Colors.red.shade700,
-                          backgroundColor: Colors.red.shade50,
-                          elevation: 0,
-                          side: BorderSide(
-                              color: Colors.red.shade200, width: 1.5),
-                          shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12)),
+                Expanded(
+                  flex: esPantallaBaja ? 0 : 1,
+                  child: Center(
+                    child: SizedBox(
+                      width: esPantallaBaja ? 280 : null,
+                      height: esPantallaBaja ? 280 : null,
+                      child: AspectRatio(
+                        aspectRatio: 1,
+                        child: Padding(
                           padding: const EdgeInsets.symmetric(
-                              horizontal: 14, vertical: 10),
+                              horizontal: 16.0, vertical: 4.0),
+                          child: GridView.builder(
+                            physics: const NeverScrollableScrollPhysics(),
+                            gridDelegate:
+                                const SliverGridDelegateWithFixedCrossAxisCount(
+                              crossAxisCount: 7,
+                              crossAxisSpacing: 4.0,
+                              mainAxisSpacing: 4.0,
+                            ),
+                            itemCount: 49,
+                            itemBuilder: (context, index) {
+                              final fila = index ~/ 7;
+                              final columna = index % 7;
+                              final coord = Coordenada(fila, columna);
+                              final esInicial =
+                                  casillasIniciales.contains(coord);
+                              final valor = valoresActuales[coord];
+
+                              Widget? iconoEstrella;
+                              if (esInicial && valor == null) {
+                                iconoEstrella = const FittedBox(
+                                  fit: BoxFit.scaleDown,
+                                  child: Icon(
+                                    Icons.star_rounded,
+                                    color: Colors.white70,
+                                    size: 24,
+                                  ),
+                                );
+                              }
+
+                              return GestureDetector(
+                                key: ValueKey('casilla_${fila}_$columna'),
+                                onTapDown: (details) {
+                                  if (esInicial && estadoInicial != null) {
+                                    _abrirSelectorValorInicial(
+                                        context, coord, estadoInicial);
+                                  } else if (!esInicial) {
+                                    _mostrarToast(
+                                      context,
+                                      details.globalPosition,
+                                      'Casilla no habilitada aún. Toca una estrella.',
+                                    );
+                                  }
+                                },
+                                child: Stack(
+                                  alignment: Alignment.center,
+                                  children: [
+                                    CasillaJuego(
+                                      colorBase: coloresTablero[fila][columna],
+                                      estado: valor != null
+                                          ? EstadoCasilla.usado
+                                          : EstadoCasilla.sinUsar,
+                                      valor: valor,
+                                    ),
+                                    if (iconoEstrella != null) iconoEstrella,
+                                  ],
+                                ),
+                              );
+                            },
+                          ),
                         ),
                       ),
+                    ),
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 14.0, vertical: 8.0),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Wrap(
+                        alignment: WrapAlignment.center,
+                        spacing: 8,
+                        runSpacing: 6,
+                        children: [
+                          ElevatedButton.icon(
+                            key: const Key('boton_limpiar'),
+                            onPressed: valoresActuales.isNotEmpty
+                                ? () => context
+                                    .read<JuegoBloc>()
+                                    .add(LimpiarValoresIniciales())
+                                : null,
+                            icon: const Icon(Icons.delete_outline, size: 18),
+                            label: const Text('Limpiar'),
+                            style: ElevatedButton.styleFrom(
+                              foregroundColor: Colors.red.shade700,
+                              backgroundColor: Colors.red.shade50,
+                              elevation: 0,
+                              side: BorderSide(
+                                  color: Colors.red.shade200, width: 1.5),
+                              shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12)),
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 12, vertical: 8),
+                            ),
+                          ),
+                          ElevatedButton.icon(
+                            key: const Key('boton_aleatorio'),
+                            onPressed: () => context
+                                .read<JuegoBloc>()
+                                .add(LlenarValoresAleatorios()),
+                            icon: const Icon(Icons.casino, size: 18),
+                            label: const Text('Qué flojera, acomódalos tú'),
+                            style: ElevatedButton.styleFrom(
+                              foregroundColor: Colors.deepPurple.shade700,
+                              backgroundColor: Colors.deepPurple.shade50,
+                              elevation: 0,
+                              side: BorderSide(
+                                  color: Colors.deepPurple.shade200,
+                                  width: 1.5),
+                              shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12)),
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 12, vertical: 8),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
                       ElevatedButton.icon(
-                        key: const Key('boton_aleatorio'),
-                        onPressed: () => context
-                            .read<JuegoBloc>()
-                            .add(LlenarValoresAleatorios()),
-                        icon: const Icon(Icons.casino, size: 20),
-                        label: const Text('Qué flojera, acomódalos tú'),
+                        key: const Key('boton_comenzar_nivel'),
+                        onPressed: listoParaAvanzar
+                            ? () =>
+                                context.read<JuegoBloc>().add(AvanzarJuego())
+                            : null,
+                        icon: const Icon(Icons.play_arrow),
+                        label: const Text('Comenzar Nivel'),
                         style: ElevatedButton.styleFrom(
-                          foregroundColor: Colors.deepPurple.shade700,
-                          backgroundColor: Colors.deepPurple.shade50,
-                          elevation: 0,
-                          side: BorderSide(
-                              color: Colors.deepPurple.shade200, width: 1.5),
-                          shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12)),
+                          backgroundColor: Colors.blue.shade700,
+                          foregroundColor: Colors.white,
                           padding: const EdgeInsets.symmetric(
-                              horizontal: 14, vertical: 10),
+                              horizontal: 28, vertical: 12),
+                          textStyle: const TextStyle(
+                              fontSize: 16, fontWeight: FontWeight.bold),
+                          shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(14)),
                         ),
                       ),
                     ],
                   ),
-                  const SizedBox(height: 10),
-                  ElevatedButton.icon(
-                    key: const Key('boton_comenzar_nivel'),
-                    onPressed: listoParaAvanzar
-                        ? () => context.read<JuegoBloc>().add(AvanzarJuego())
-                        : null,
-                    icon: const Icon(Icons.play_arrow),
-                    label: const Text('Comenzar Nivel'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.blue.shade700,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 36, vertical: 14),
-                      textStyle: const TextStyle(
-                          fontSize: 17, fontWeight: FontWeight.bold),
-                      shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(14)),
-                    ),
-                  ),
-                ],
+                ),
+              ],
+            );
+
+            return SingleChildScrollView(
+              physics: esPantallaBaja
+                  ? const AlwaysScrollableScrollPhysics()
+                  : const NeverScrollableScrollPhysics(),
+              child: ConstrainedBox(
+                constraints: BoxConstraints(minHeight: constraints.maxHeight),
+                child: IntrinsicHeight(child: contenido),
               ),
-            ),
-          ],
+            );
+          },
         ),
       ),
     );
@@ -387,122 +417,147 @@ class _PantallaJuegoState extends State<PantallaJuego> {
         ],
       ),
       body: SafeArea(
-        child: Column(
-          children: [
-            // Puntos y turno
-            PanelPuntuacion(state: state),
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final esPantallaBaja = constraints.maxHeight < 560;
 
-            // Mensaje de ayuda
-            BannerInstruccion(state: state),
+            final contenido = Column(
+              children: [
+                // Puntos y turno
+                PanelPuntuacion(state: state),
 
-            // Tablero 7x7
-            Expanded(
-              child: Center(
-                child: AspectRatio(
-                  aspectRatio: 1,
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 22.0, vertical: 6.0),
-                    child: GridView.builder(
-                      physics: const NeverScrollableScrollPhysics(),
-                      gridDelegate:
-                          const SliverGridDelegateWithFixedCrossAxisCount(
-                        crossAxisCount: 7,
-                        crossAxisSpacing: 5.0,
-                        mainAxisSpacing: 5.0,
-                      ),
-                      itemCount: 49,
-                      itemBuilder: (context, index) {
-                        final fila = index ~/ 7;
-                        final columna = index % 7;
-                        final coord = Coordenada(fila, columna);
-                        final celda = state.tablero.celdas[coord];
+                // Mensaje de ayuda
+                BannerInstruccion(state: state),
 
-                        final colorBase = celda?.region.tipo.color ??
-                            coloresTablero[fila][columna];
-                        final valor = celda?.valor;
-                        final bool esAnclaSeleccionada =
-                            coord == state.anclaSeleccionada;
-                        final bool esAnclaElegible =
-                            state.anclasElegibles.contains(coord) &&
-                                state.anclaSeleccionada == null;
-                        final bool esLugarValido =
-                            state.casillasValidas.contains(coord);
+                // Tablero 7x7
+                Expanded(
+                  flex: esPantallaBaja ? 0 : 1,
+                  child: Center(
+                    child: SizedBox(
+                      width: esPantallaBaja ? 290 : null,
+                      height: esPantallaBaja ? 290 : null,
+                      child: AspectRatio(
+                        aspectRatio: 1,
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 16.0, vertical: 4.0),
+                          child: GridView.builder(
+                            physics: const NeverScrollableScrollPhysics(),
+                            gridDelegate:
+                                const SliverGridDelegateWithFixedCrossAxisCount(
+                              crossAxisCount: 7,
+                              crossAxisSpacing: 4.0,
+                              mainAxisSpacing: 4.0,
+                            ),
+                            itemCount: 49,
+                            itemBuilder: (context, index) {
+                              final fila = index ~/ 7;
+                              final columna = index % 7;
+                              final coord = Coordenada(fila, columna);
+                              final celda = state.tablero.celdas[coord];
 
-                        final bool regionCompleta = celda != null &&
-                            state.tablero.esRegionCompleta(celda.region);
-                        final estadoCasilla = celda == null || celda.estaVacia
-                            ? EstadoCasilla.sinUsar
-                            : (regionCompleta
-                                ? EstadoCasilla.puntuado
-                                : EstadoCasilla.usado);
+                              final colorBase = celda?.region.tipo.color ??
+                                  coloresTablero[fila][columna];
+                              final valor = celda?.valor;
+                              final bool esAnclaSeleccionada =
+                                  coord == state.anclaSeleccionada;
+                              final bool esAnclaElegible =
+                                  state.anclasElegibles.contains(coord) &&
+                                      state.anclaSeleccionada == null;
+                              final bool esLugarValido =
+                                  state.casillasValidas.contains(coord);
 
-                        return GestureDetector(
-                          key: ValueKey('casilla_${fila}_$columna'),
-                          onTapDown: (details) {
-                            if (esLugarValido) {
-                              context
-                                  .read<JuegoBloc>()
-                                  .add(ColocarNumero(coord));
-                            } else if (state.anclasElegibles.contains(coord)) {
-                              if (esAnclaSeleccionada) {
-                                context
-                                    .read<JuegoBloc>()
-                                    .add(DeseleccionarAncla());
-                              } else {
-                                context
-                                    .read<JuegoBloc>()
-                                    .add(SeleccionarAncla(coord));
-                              }
-                            } else if (celda != null && !celda.estaVacia) {
-                              _mostrarToast(
-                                context,
-                                details.globalPosition,
-                                'Esta ancla tiene valor $valor. Los dados salieron con ${state.dado1} y ${state.dado2}.',
+                              final bool regionCompleta = celda != null &&
+                                  state.tablero.esRegionCompleta(celda.region);
+                              final estadoCasilla =
+                                  celda == null || celda.estaVacia
+                                      ? EstadoCasilla.sinUsar
+                                      : (regionCompleta
+                                          ? EstadoCasilla.puntuado
+                                          : EstadoCasilla.usado);
+
+                              return GestureDetector(
+                                key: ValueKey('casilla_${fila}_$columna'),
+                                onTapDown: (details) {
+                                  if (esLugarValido) {
+                                    context
+                                        .read<JuegoBloc>()
+                                        .add(ColocarNumero(coord));
+                                  } else if (state.anclasElegibles
+                                      .contains(coord)) {
+                                    if (esAnclaSeleccionada) {
+                                      context
+                                          .read<JuegoBloc>()
+                                          .add(DeseleccionarAncla());
+                                    } else {
+                                      context
+                                          .read<JuegoBloc>()
+                                          .add(SeleccionarAncla(coord));
+                                    }
+                                  } else if (celda != null && !celda.estaVacia) {
+                                    _mostrarToast(
+                                      context,
+                                      details.globalPosition,
+                                      'Esta ancla tiene valor $valor. Los dados salieron con ${state.dado1} y ${state.dado2}.',
+                                    );
+                                  } else {
+                                    if (state.anclaSeleccionada == null) {
+                                      _mostrarToast(
+                                        context,
+                                        details.globalPosition,
+                                        'Primero toca un ancla con valor ${state.dado1} o ${state.dado2}.',
+                                      );
+                                    } else {
+                                      _mostrarToast(
+                                        context,
+                                        details.globalPosition,
+                                        'Casilla no válida según las reglas de la región.',
+                                      );
+                                    }
+                                  }
+                                },
+                                child: CasillaJuego(
+                                  colorBase: colorBase,
+                                  estado: estadoCasilla,
+                                  valor: valor,
+                                  esAnclaSeleccionada: esAnclaSeleccionada,
+                                  esAnclaElegible: esAnclaElegible,
+                                  esLugarValido: esLugarValido,
+                                  valorPreview:
+                                      esLugarValido ? state.numeroAColocar : null,
+                                ),
                               );
-                            } else {
-                              if (state.anclaSeleccionada == null) {
-                                _mostrarToast(
-                                  context,
-                                  details.globalPosition,
-                                  'Primero toca un ancla con valor ${state.dado1} o ${state.dado2}.',
-                                );
-                              } else {
-                                _mostrarToast(
-                                  context,
-                                  details.globalPosition,
-                                  'Casilla no válida según las reglas de la región.',
-                                );
-                              }
-                            }
-                          },
-                          child: CasillaJuego(
-                            colorBase: colorBase,
-                            estado: estadoCasilla,
-                            valor: valor,
-                            esAnclaSeleccionada: esAnclaSeleccionada,
-                            esAnclaElegible: esAnclaElegible,
-                            esLugarValido: esLugarValido,
-                            valorPreview:
-                                esLugarValido ? state.numeroAColocar : null,
+                            },
                           ),
-                        );
-                      },
+                        ),
+                      ),
                     ),
                   ),
                 ),
-              ),
-            ),
 
-            // Dados y botones
-            PanelDados(
-              state: state,
-              onTirarDados: () => context.read<JuegoBloc>().add(TirarDados()),
-              onCancelarAncla: () =>
-                  context.read<JuegoBloc>().add(DeseleccionarAncla()),
-              onPasarTurno: () => context.read<JuegoBloc>().add(PasarTurno()),
-            ),
-          ],
+                // Dados y botones
+                PanelDados(
+                  state: state,
+                  onTirarDados: () =>
+                      context.read<JuegoBloc>().add(TirarDados()),
+                  onCancelarAncla: () =>
+                      context.read<JuegoBloc>().add(DeseleccionarAncla()),
+                  onPasarTurno: () =>
+                      context.read<JuegoBloc>().add(PasarTurno()),
+                ),
+              ],
+            );
+
+            return SingleChildScrollView(
+              physics: esPantallaBaja
+                  ? const AlwaysScrollableScrollPhysics()
+                  : const NeverScrollableScrollPhysics(),
+              child: ConstrainedBox(
+                constraints: BoxConstraints(minHeight: constraints.maxHeight),
+                child: IntrinsicHeight(child: contenido),
+              ),
+            );
+          },
         ),
       ),
     );
