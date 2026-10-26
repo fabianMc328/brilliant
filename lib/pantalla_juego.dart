@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import 'casilla_juego.dart';
-import 'nivel1_tablero.dart';
+import 'niveles/catalogo_niveles.dart';
+import 'niveles/nivel_definicion.dart';
 import 'region.dart';
 import 'juego_bloc.dart';
 import 'juego_evento.dart';
@@ -12,23 +13,28 @@ import 'widgets/banner_instruccion.dart';
 import 'widgets/panel_dados.dart';
 import 'widgets/selector_valor_inicial_sheet.dart';
 
-/// Pantalla Principal del Juego Brilliant.
-
+// Pantalla donde se juega la partida.
 class PantallaJuego extends StatefulWidget {
-  const PantallaJuego({super.key});
+  final NivelDefinicion? nivel;
+
+  const PantallaJuego({super.key, this.nivel});
 
   @override
   State<PantallaJuego> createState() => _PantallaJuegoState();
 }
 
 class _PantallaJuegoState extends State<PantallaJuego> {
+  late final NivelDefinicion nivelActivo;
   late final List<List<Color>> coloresTablero;
-  final List<Coordenada> casillasIniciales = Nivel1Config.casillasIniciales;
+  late final List<Coordenada> casillasIniciales;
 
   @override
   void initState() {
     super.initState();
-    final tableroRef = Nivel1Config.crearTablero();
+    nivelActivo = widget.nivel ?? CatalogoNiveles.nivel1;
+    casillasIniciales = nivelActivo.casillasIniciales;
+
+    final tableroRef = nivelActivo.crearTablero();
 
     coloresTablero = List.generate(7, (fila) {
       return List.generate(7, (columna) {
@@ -39,7 +45,7 @@ class _PantallaJuegoState extends State<PantallaJuego> {
 
     context
         .read<JuegoBloc>()
-        .add(IniciarConfiguracionInicial(casillasIniciales));
+        .add(IniciarConfiguracionInicial(casillasIniciales, nivel: nivelActivo));
   }
 
   void _abrirSelectorValorInicial(
@@ -154,7 +160,7 @@ class _PantallaJuegoState extends State<PantallaJuego> {
     );
   }
 
-  /// Fase 1: Selección de los 6 números iniciales (anclas)
+  // Fase 1: poner los números en las estrellas.
   Widget _construirPantallaFase1(BuildContext context, JuegoEstado state) {
     JuegoEsperandoValoresIniciales? estadoInicial;
     if (state is JuegoEsperandoValoresIniciales) {
@@ -169,8 +175,16 @@ class _PantallaJuegoState extends State<PantallaJuego> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Brilliant - Nivel 1'),
+        title: Text('Brilliant - ${nivelActivo.nombre}'),
         centerTitle: true,
+        leading: Navigator.of(context).canPop()
+            ? IconButton(
+                key: const Key('boton_volver_seleccion'),
+                icon: const Icon(Icons.arrow_back),
+                tooltip: 'Elegir otro tablero',
+                onPressed: () => Navigator.of(context).pop(),
+              )
+            : null,
       ),
       body: SafeArea(
         child: Column(
@@ -238,7 +252,7 @@ class _PantallaJuegoState extends State<PantallaJuego> {
                         }
 
                         return GestureDetector(
-                          key: ValueKey('casilla_${fila}_${columna}'),
+                          key: ValueKey('casilla_${fila}_$columna'),
                           onTapDown: (details) {
                             if (esInicial && estadoInicial != null) {
                               _abrirSelectorValorInicial(
@@ -350,12 +364,20 @@ class _PantallaJuegoState extends State<PantallaJuego> {
     );
   }
 
-  /// Fase 2: Gameplay con Dados, Anclas iluminadas y Puntuación en vivo
+  // Fase 2: dados y anclas.
   Widget _construirPantallaFase2(BuildContext context, JuegoEnProgreso state) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Brilliant - Nivel 1'),
+        title: Text('Brilliant - ${nivelActivo.nombre}'),
         centerTitle: true,
+        leading: Navigator.of(context).canPop()
+            ? IconButton(
+                key: const Key('boton_volver_seleccion'),
+                icon: const Icon(Icons.arrow_back),
+                tooltip: 'Elegir otro tablero',
+                onPressed: () => Navigator.of(context).pop(),
+              )
+            : null,
         actions: [
           IconButton(
             tooltip: 'Tirar dados de nuevo',
@@ -367,13 +389,13 @@ class _PantallaJuegoState extends State<PantallaJuego> {
       body: SafeArea(
         child: Column(
           children: [
-            // 1. Marcador de Puntuación y Turno (Desacoplado en PanelPuntuacion)
+            // Puntos y turno
             PanelPuntuacion(state: state),
 
-            // 2. Banner de Instrucción Contextual (Desacoplado en BannerInstruccion)
+            // Mensaje de ayuda
             BannerInstruccion(state: state),
 
-            // 3. Tablero 7x7 Dinámico
+            // Tablero 7x7
             Expanded(
               child: Center(
                 child: AspectRatio(
@@ -416,7 +438,7 @@ class _PantallaJuegoState extends State<PantallaJuego> {
                                 : EstadoCasilla.usado);
 
                         return GestureDetector(
-                          key: ValueKey('casilla_${fila}_${columna}'),
+                          key: ValueKey('casilla_${fila}_$columna'),
                           onTapDown: (details) {
                             if (esLugarValido) {
                               context
@@ -472,7 +494,7 @@ class _PantallaJuegoState extends State<PantallaJuego> {
               ),
             ),
 
-            // 4. Panel Inferior de Dados y Acciones (Desacoplado en PanelDados)
+            // Dados y botones
             PanelDados(
               state: state,
               onTirarDados: () => context.read<JuegoBloc>().add(TirarDados()),

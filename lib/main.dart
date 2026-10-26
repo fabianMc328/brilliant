@@ -1,14 +1,14 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
-import 'pantalla_juego.dart';
-import 'juego_bloc.dart';
+import 'pantalla_seleccion_nivel.dart';
 
 void main() {
   runApp(const AplicacionBrilliant());
 }
 
 class AplicacionBrilliant extends StatelessWidget {
-  const AplicacionBrilliant({super.key});
+  final Widget? pantallaInicial;
+
+  const AplicacionBrilliant({super.key, this.pantallaInicial});
 
   @override
   Widget build(BuildContext context) {
@@ -19,10 +19,7 @@ class AplicacionBrilliant extends StatelessWidget {
         useMaterial3: true,
         scaffoldBackgroundColor: const Color(0xFFF1F5F9),
       ),
-      home: BlocProvider(
-        create: (context) => JuegoBloc(),
-        child: const PantallaJuego(),
-      ),
+      home: pantallaInicial ?? const PantallaSeleccionNivel(),
     );
   }
 }

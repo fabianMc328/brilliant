@@ -114,7 +114,7 @@ void main() {
           home: Scaffold(
             body: SelectorValorInicialSheet(
               valorActual: null,
-              onNumeroSeleccionado: (num) => seleccionado = num,
+              onNumeroSeleccionado: (valor) => seleccionado = valor,
             ),
           ),
         ),

@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import '../juego_estado.dart';
 import '../tipo.dart';
 
-// Muestra los puntos acumulados, el turno actual y el avance por color.
+// Muestra puntos, turno y avance de cada color.
 class PanelPuntuacion extends StatelessWidget {
   final JuegoEnProgreso state;
 
@@ -11,7 +11,25 @@ class PanelPuntuacion extends StatelessWidget {
     required this.state,
   });
 
-  Widget _construirChipProgreso(Color color, String label, Type tipo, Map<Type, int> completadasPorTipo, Map<Type, int> totalPorTipo) {
+  String _obtenerEtiquetaTipo(Tipo tipo) {
+    if (tipo is TipoAzul) return 'Azul';
+    if (tipo is TipoMorado) return 'Morado';
+    if (tipo is TipoRojo) return 'Rojo';
+    if (tipo is TipoVerde) return 'Verde';
+    if (tipo is TipoAmarillo) return 'Amarillo';
+    if (tipo is TipoGris) return 'Gris';
+    if (tipo is TipoNaranja1a3) return 'Nar. 1-3';
+    if (tipo is TipoNaranja4a6) return 'Nar. 4-6';
+    return 'Zona';
+  }
+
+  Widget _construirChipProgreso(
+    Color color,
+    String label,
+    Type tipo,
+    Map<Type, int> completadasPorTipo,
+    Map<Type, int> totalPorTipo,
+  ) {
     final completadas = completadasPorTipo[tipo] ?? 0;
     final total = totalPorTipo[tipo] ?? 1;
     final bool completada = completadas == total;
@@ -50,12 +68,15 @@ class PanelPuntuacion extends StatelessWidget {
     final regiones = state.tablero.regiones;
     final Map<Type, int> completadasPorTipo = {};
     final Map<Type, int> totalPorTipo = {};
+    final Map<Type, Tipo> tiposUnicos = {};
 
     for (final reg in regiones) {
-      final tipo = reg.tipo.runtimeType;
-      totalPorTipo[tipo] = (totalPorTipo[tipo] ?? 0) + 1;
+      final tipoRuntime = reg.tipo.runtimeType;
+      tiposUnicos.putIfAbsent(tipoRuntime, () => reg.tipo);
+      totalPorTipo[tipoRuntime] = (totalPorTipo[tipoRuntime] ?? 0) + 1;
       if (state.tablero.esRegionCompleta(reg)) {
-        completadasPorTipo[tipo] = (completadasPorTipo[tipo] ?? 0) + 1;
+        completadasPorTipo[tipoRuntime] =
+            (completadasPorTipo[tipoRuntime] ?? 0) + 1;
       }
     }
 
@@ -80,7 +101,7 @@ class PanelPuntuacion extends StatelessWidget {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                // Puntuación
+                // Puntos
                 Row(
                   children: [
                     Container(
@@ -123,7 +144,8 @@ class PanelPuntuacion extends StatelessWidget {
                 ),
                 // Turno
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                   decoration: BoxDecoration(
                     color: Colors.blue.shade50,
                     borderRadius: BorderRadius.circular(12),
@@ -131,7 +153,8 @@ class PanelPuntuacion extends StatelessWidget {
                   ),
                   child: Row(
                     children: [
-                      Icon(Icons.flag_outlined, size: 16, color: Colors.blue.shade700),
+                      Icon(Icons.flag_outlined,
+                          size: 16, color: Colors.blue.shade700),
                       const SizedBox(width: 4),
                       Text(
                         'Turno ${state.turno}',
@@ -148,21 +171,24 @@ class PanelPuntuacion extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 8),
-            // Chips de Regiones
+            // Fichas de colores del nivel
             SingleChildScrollView(
               scrollDirection: Axis.horizontal,
               child: Row(
-                children: [
-                  _construirChipProgreso(TipoAzul().color, 'Azul', TipoAzul, completadasPorTipo, totalPorTipo),
-                  const SizedBox(width: 6),
-                  _construirChipProgreso(TipoMorado().color, 'Morado', TipoMorado, completadasPorTipo, totalPorTipo),
-                  const SizedBox(width: 6),
-                  _construirChipProgreso(TipoRojo().color, 'Rojo', TipoRojo, completadasPorTipo, totalPorTipo),
-                  const SizedBox(width: 6),
-                  _construirChipProgreso(TipoVerde().color, 'Verde', TipoVerde, completadasPorTipo, totalPorTipo),
-                  const SizedBox(width: 6),
-                  _construirChipProgreso(TipoAmarillo().color, 'Amarillo', TipoAmarillo, completadasPorTipo, totalPorTipo),
-                ],
+                children: tiposUnicos.entries.map((entry) {
+                  final tipoInstancia = entry.value;
+                  final tipoRuntime = entry.key;
+                  return Padding(
+                    padding: const EdgeInsets.only(right: 6.0),
+                    child: _construirChipProgreso(
+                      tipoInstancia.color,
+                      _obtenerEtiquetaTipo(tipoInstancia),
+                      tipoRuntime,
+                      completadasPorTipo,
+                      totalPorTipo,
+                    ),
+                  );
+                }).toList(),
               ),
             ),
           ],
