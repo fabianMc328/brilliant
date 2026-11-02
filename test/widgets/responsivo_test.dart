@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:brilliant/juego_bloc.dart';
 import 'package:brilliant/juego_evento.dart';
+import 'package:brilliant/main.dart';
 import 'package:brilliant/pantalla_juego.dart';
 import 'package:brilliant/pantalla_seleccion_nivel.dart';
 
@@ -56,4 +57,19 @@ void main() {
       expect(find.byKey(const Key('texto_puntuacion_total')), findsOneWidget);
     });
   }
+
+  testWidgets('Responsividad en pantalla de laptop/escritorio (1366x768)', (tester) async {
+    tester.view.physicalSize = const Size(1366, 768);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(() {
+      tester.view.resetPhysicalSize();
+      tester.view.resetDevicePixelRatio();
+    });
+
+    await tester.pumpWidget(const AplicacionBrilliant());
+    await tester.pumpAndSettle();
+
+    expect(find.byType(PantallaSeleccionNivel), findsOneWidget);
+    expect(find.text('Selecciona tu Tablero'), findsOneWidget);
+  });
 }

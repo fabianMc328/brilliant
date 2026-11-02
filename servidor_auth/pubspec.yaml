@@ -1,0 +1,17 @@
+name: servidor_auth
+description: Servidor de autenticación independiente para Brilliant
+version: 1.0.0
+publish_to: none
+
+environment:
+  sdk: '>=3.0.0 <4.0.0'
+
+dependencies:
+  shelf: ^1.4.2
+  shelf_router: ^1.1.4
+  shelf_static: ^1.2.0
+  crypto: ^3.0.3
+
+dev_dependencies:
+  test: ^1.25.0
+  http: ^1.2.0

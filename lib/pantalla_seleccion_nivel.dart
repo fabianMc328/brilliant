@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
+import 'auth/bloc/auth_bloc.dart';
+import 'auth/bloc/auth_estado.dart';
+import 'auth/bloc/auth_evento.dart';
+import 'auth/vistas/dialogo_eliminar_cuenta.dart';
 import 'juego_bloc.dart';
 import 'niveles/catalogo_niveles.dart';
 import 'niveles/nivel_definicion.dart';
@@ -24,6 +28,9 @@ class PantallaSeleccionNivel extends StatelessWidget {
         centerTitle: true,
         elevation: 0,
         backgroundColor: Colors.transparent,
+        actions: const [
+          _BotonMenuCuenta(),
+        ],
       ),
       body: SafeArea(
         child: Column(
@@ -84,6 +91,97 @@ class PantallaSeleccionNivel extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+/// Menú desplegable con opciones de la cuenta autenticada.
+class _BotonMenuCuenta extends StatelessWidget {
+  const _BotonMenuCuenta();
+
+  @override
+  Widget build(BuildContext context) {
+    AuthBloc? authBloc;
+    try {
+      authBloc = context.read<AuthBloc>();
+    } catch (_) {
+      authBloc = null;
+    }
+
+    if (authBloc == null) {
+      return const SizedBox.shrink();
+    }
+
+    return BlocBuilder<AuthBloc, AuthEstado>(
+      builder: (context, state) {
+        if (state is! Autenticado) {
+          return const SizedBox.shrink();
+        }
+
+        return PopupMenuButton<String>(
+          key: const Key('menu_cuenta_usuario'),
+          icon: const Icon(
+            Icons.account_circle_outlined,
+            color: Color(0xFF0F172A),
+            size: 26,
+          ),
+          tooltip: 'Mi Cuenta (${state.usuario.email})',
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          onSelected: (opcion) {
+            if (opcion == 'logout') {
+              context.read<AuthBloc>().add(const CerrarSesionSolicitado());
+            } else if (opcion == 'delete') {
+              DialogoEliminarCuenta.mostrar(context);
+            }
+          },
+          itemBuilder: (context) => [
+            PopupMenuItem(
+              enabled: false,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Sesión iniciada como:',
+                    style: TextStyle(fontSize: 11, color: Color(0xFF64748B)),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    state.usuario.email,
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 13,
+                      color: Color(0xFF0F172A),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const PopupMenuDivider(),
+            const PopupMenuItem(
+              value: 'logout',
+              key: Key('opcion_cerrar_sesion'),
+              child: Row(
+                children: [
+                  Icon(Icons.logout_rounded, size: 18, color: Color(0xFF475569)),
+                  SizedBox(width: 8),
+                  Text('Cerrar Sesión'),
+                ],
+              ),
+            ),
+            const PopupMenuItem(
+              value: 'delete',
+              key: Key('opcion_eliminar_cuenta'),
+              child: Row(
+                children: [
+                  Icon(Icons.delete_forever_rounded, size: 18, color: Color(0xFFDC2626)),
+                  SizedBox(width: 8),
+                  Text('Eliminar Cuenta', style: TextStyle(color: Color(0xFFDC2626))),
+                ],
+              ),
+            ),
+          ],
+        );
+      },
     );
   }
 }
