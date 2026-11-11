@@ -17,8 +17,14 @@ import 'widgets/pantalla_juego_test.dart' as pantalla_juego_test;
 import 'widgets/pantalla_seleccion_nivel_test.dart'
     as pantalla_seleccion_nivel_test;
 import 'widgets/responsivo_test.dart' as responsivo_test;
+import 'multijugador/dominio_multijugador_test.dart'
+    as dominio_multijugador_test;
+import 'multijugador/cliente_websocket_test.dart' as cliente_websocket_test;
+import 'multijugador/blocs_multijugador_test.dart' as blocs_multijugador_test;
+import 'multijugador/widgets_multijugador_test.dart'
+    as widgets_multijugador_test;
 
-// Corre todas las pruebas del juego juntas.
+// Corre todas las pruebas del cliente Flutter (Solitario + Multijugador).
 void main() {
   group('Reglas y lógica del tablero', () {
     reglas_test.main();
@@ -43,5 +49,12 @@ void main() {
     pantalla_juego_test.main();
     pantalla_seleccion_nivel_test.main();
     responsivo_test.main();
+  });
+
+  group('Multijugador Cliente (Dominio, Cliente WebSocket, BLoCs y UI)', () {
+    dominio_multijugador_test.main();
+    cliente_websocket_test.main();
+    blocs_multijugador_test.main();
+    widgets_multijugador_test.main();
   });
 }
