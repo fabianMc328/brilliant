@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'pantalla_seleccion_nivel.dart';
+import 'multijugador/vistas/pantalla_inicio_modo.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -25,7 +25,7 @@ class AplicacionBrilliant extends StatelessWidget {
         useMaterial3: true,
         scaffoldBackgroundColor: const Color(0xFFF1F5F9),
       ),
-      home: pantallaInicial ?? const PantallaSeleccionNivel(),
+      home: pantallaInicial ?? const PantallaInicioModo(),
     );
   }
 }
