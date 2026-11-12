@@ -1,5 +1,6 @@
 import 'estado_sala_multijugador.dart';
 import 'estados_jugador_sala.dart';
+import 'mensajes_protocolo.dart';
 import 'modelos_mapa.dart';
 
 /// Contrato abstracto de comunicación multijugador (Principio de Inversión de Dependencias).
@@ -13,6 +14,9 @@ abstract class RepositorioMultijugador {
 
   /// Flujo de errores asíncronos enviados por el servidor o capa de red.
   Stream<FalloMultijugador> get flujoErrores;
+
+  /// Flujo de mensajes de chat en tiempo real.
+  Stream<MensajeChat> get flujoChat;
 
   /// Último snapshot recibido de la sala actual, si existe.
   EstadoSalaMultijugador? get ultimoEstadoSala;
@@ -66,6 +70,9 @@ abstract class RepositorioMultijugador {
 
   /// Concede (se rinde en) la partida actual de forma voluntaria.
   Future<void> concederPartida();
+
+  /// Envía un mensaje de chat a todos los miembros de la sala.
+  Future<void> enviarMensajeChat(String texto);
 
   /// Abandona limpiamente la sala actual y cierra la sesión activa.
   Future<void> salirDeSala();

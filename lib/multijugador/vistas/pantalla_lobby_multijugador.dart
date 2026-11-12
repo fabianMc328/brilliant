@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
+import '../../widgets/dialogo_como_jugar.dart';
 import '../bloc/lobby_bloc.dart';
 import '../bloc/lobby_estado.dart';
 import '../bloc/lobby_evento.dart';
 import '../bloc/partida_multijugador_bloc.dart';
 import '../dominio/repositorio_multijugador.dart';
 import '../infraestructura/cliente_websocket_multijugador.dart';
+import '../widgets/dialogo_chat_multijugador.dart';
 import 'pantalla_partida_multijugador.dart';
 import 'vista_acceso_sala.dart';
 import 'vista_sala_espera.dart';
@@ -14,10 +16,12 @@ import 'vista_sala_espera.dart';
 /// Coordina el acceso por código, el Lobby de 2-6 jugadores y la transición a la partida.
 class PantallaLobbyMultijugador extends StatefulWidget {
   final RepositorioMultijugador? repositorioExterno;
+  final String? apodoInicial;
 
   const PantallaLobbyMultijugador({
     super.key,
     this.repositorioExterno,
+    this.apodoInicial,
   });
 
   @override
@@ -46,6 +50,13 @@ class _PantallaLobbyMultijugadorState extends State<PantallaLobbyMultijugador> {
       _repositorio.cerrar();
     }
     super.dispose();
+  }
+
+  void _abrirChat(BuildContext context) {
+    DialogoChatMultijugador.mostrarParaLobby(
+      context: context,
+      lobbyBloc: _lobbyBloc,
+    );
   }
 
   @override
@@ -95,6 +106,25 @@ class _PantallaLobbyMultijugadorState extends State<PantallaLobbyMultijugador> {
                   }
                 },
               ),
+              actions: [
+                IconButton(
+                  key: const Key('boton_como_jugar_lobby'),
+                  tooltip: '¿Cómo jugar?',
+                  icon: const Icon(Icons.help_outline_rounded),
+                  onPressed: () => DialogoComoJugar.mostrar(context),
+                ),
+                if (enSala)
+                  IconButton(
+                    key: const Key('boton_abrir_chat_lobby'),
+                    tooltip: 'Chat de la Sala',
+                    icon: Badge(
+                      isLabelVisible: state.historialChat.isNotEmpty,
+                      label: Text('${state.historialChat.length}'),
+                      child: const Icon(Icons.chat_bubble_outline_rounded),
+                    ),
+                    onPressed: () => _abrirChat(context),
+                  ),
+              ],
             ),
             body: SafeArea(
               child: _construirCuerpo(state),
@@ -141,6 +171,7 @@ class _PantallaLobbyMultijugadorState extends State<PantallaLobbyMultijugador> {
     return VistaAccesoSala(
       urlServidorActual: state.urlServidor,
       mensajeError: error,
+      apodoInicial: widget.apodoInicial,
     );
   }
 }

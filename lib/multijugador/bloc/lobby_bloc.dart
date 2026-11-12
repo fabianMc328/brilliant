@@ -4,6 +4,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import '../constantes_multijugador.dart';
 import '../dominio/estado_sala_multijugador.dart';
 import '../dominio/estados_jugador_sala.dart';
+import '../dominio/mensajes_protocolo.dart';
 import '../dominio/repositorio_multijugador.dart';
 import 'lobby_estado.dart';
 import 'lobby_evento.dart';
@@ -14,6 +15,7 @@ class LobbyBloc extends Bloc<LobbyEvento, LobbyEstado> {
   StreamSubscription<EstadoSalaMultijugador>? _subSala;
   StreamSubscription<EstadoConexionCliente>? _subConexion;
   StreamSubscription<FalloMultijugador>? _subErrores;
+  StreamSubscription<MensajeChat>? _subChat;
 
   LobbyBloc({required RepositorioMultijugador repositorio})
       : _repositorio = repositorio,
@@ -27,6 +29,8 @@ class LobbyBloc extends Bloc<LobbyEvento, LobbyEstado> {
     on<ReintentarConexionLobby>(_onReintentarConexion);
     on<LimpiarErrorLobby>(_onLimpiarError);
     on<SalirDelLobby>(_onSalirDelLobby);
+    on<EnviarMensajeChatLobby>(_onEnviarMensajeChat);
+    on<MensajeChatRecibidoLobbyInterno>(_onMensajeChatRecibido);
     on<SalaLobbyRecibidaInterna>(_onSalaRecibida);
     on<ConexionLobbyRecibidaInterna>(_onConexionRecibida);
     on<ErrorLobbyRecibidoInterno>(_onErrorRecibido);
@@ -39,6 +43,9 @@ class LobbyBloc extends Bloc<LobbyEvento, LobbyEstado> {
     );
     _subErrores = _repositorio.flujoErrores.listen(
       (err) => add(ErrorLobbyRecibidoInterno(err)),
+    );
+    _subChat = _repositorio.flujoChat.listen(
+      (msg) => add(MensajeChatRecibidoLobbyInterno(msg)),
     );
   }
 
@@ -322,11 +329,32 @@ class LobbyBloc extends Bloc<LobbyEvento, LobbyEstado> {
     }
   }
 
+  Future<void> _onEnviarMensajeChat(
+    EnviarMensajeChatLobby event,
+    Emitter<LobbyEstado> emit,
+  ) async {
+    try {
+      await _repositorio.enviarMensajeChat(event.texto);
+    } catch (_) {}
+  }
+
+  void _onMensajeChatRecibido(
+    MensajeChatRecibidoLobbyInterno event,
+    Emitter<LobbyEstado> emit,
+  ) {
+    if (state is LobbyEnSalaEspera) {
+      final actual = state as LobbyEnSalaEspera;
+      final lista = [...actual.historialChat, event.mensaje];
+      emit(actual.copiarCon(historialChat: lista));
+    }
+  }
+
   @override
   Future<void> close() async {
     await _subSala?.cancel();
     await _subConexion?.cancel();
     await _subErrores?.cancel();
+    await _subChat?.cancel();
     return super.close();
   }
 }

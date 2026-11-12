@@ -41,6 +41,8 @@ class JuegoEnProgreso extends JuegoEstado {
   final NivelDefinicion nivel;
   final int dado1;
   final int dado2;
+  final int? indiceDadoSeleccionado; // 1 para dado1, 2 para dado2
+  final bool debeTirarDados; // true tras colocar número; obliga a pulsar Tirar Dados
   final Coordenada? anclaSeleccionada;
   final int? numeroAColocar;
   final Set<Coordenada> casillasValidas;
@@ -56,6 +58,8 @@ class JuegoEnProgreso extends JuegoEstado {
     NivelDefinicion? nivel,
     required this.dado1,
     required this.dado2,
+    this.indiceDadoSeleccionado,
+    this.debeTirarDados = false,
     this.anclaSeleccionada,
     this.numeroAColocar,
     this.casillasValidas = const {},
@@ -95,6 +99,9 @@ class JuegoEnProgreso extends JuegoEstado {
     NivelDefinicion? nivel,
     int? dado1,
     int? dado2,
+    int? indiceDadoSeleccionado,
+    bool limpiarDadoSeleccionado = false,
+    bool? debeTirarDados,
     Coordenada? anclaSeleccionada,
     bool limpiarAncla = false,
     int? numeroAColocar,
@@ -113,6 +120,10 @@ class JuegoEnProgreso extends JuegoEstado {
       nivel: nivel ?? this.nivel,
       dado1: dado1 ?? this.dado1,
       dado2: dado2 ?? this.dado2,
+      indiceDadoSeleccionado: limpiarDadoSeleccionado
+          ? null
+          : (indiceDadoSeleccionado ?? this.indiceDadoSeleccionado),
+      debeTirarDados: debeTirarDados ?? this.debeTirarDados,
       anclaSeleccionada:
           limpiarAncla ? null : (anclaSeleccionada ?? this.anclaSeleccionada),
       numeroAColocar: limpiarNumeroAColocar

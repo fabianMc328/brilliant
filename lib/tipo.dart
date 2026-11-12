@@ -5,6 +5,7 @@ import 'reglas.dart';
 abstract class Tipo {
   Color get color;
   String get descripcion;
+  String get reglaCorta;
   bool esPosibleAgregar(List<int> actuales, int posible);
   Map<int, int> get puntuaciones;
 }
@@ -21,6 +22,9 @@ class TipoAzul extends Tipo {
 
   @override
   String get descripcion => 'Todos los números deben de ser iguales';
+
+  @override
+  String get reglaCorta => 'Todos =';
 
   @override
   bool esPosibleAgregar(List<int> actuales, int posible) =>
@@ -42,6 +46,9 @@ class TipoGris extends Tipo {
 
   @override
   String get descripcion => 'Todos los números deben de ser iguales';
+
+  @override
+  String get reglaCorta => 'Todos =';
 
   @override
   bool esPosibleAgregar(List<int> actuales, int posible) =>
@@ -66,6 +73,9 @@ class TipoMorado extends Tipo {
       'Puede haber como máximo 2 valores distintos en la región';
 
   @override
+  String get reglaCorta => 'Máx 2 dif.';
+
+  @override
   bool esPosibleAgregar(List<int> actuales, int posible) =>
       areaMorada(actuales, posible);
 
@@ -85,6 +95,9 @@ class TipoVerde extends Tipo {
 
   @override
   String get descripcion => 'Puede ser cualquier número';
+
+  @override
+  String get reglaCorta => 'Libre';
 
   @override
   bool esPosibleAgregar(List<int> actuales, int posible) =>
@@ -108,6 +121,9 @@ class TipoAmarillo extends Tipo {
   String get descripcion => 'Todos los números deben de ser distintos';
 
   @override
+  String get reglaCorta => 'Todos ≠';
+
+  @override
   bool esPosibleAgregar(List<int> actuales, int posible) =>
       todosDiferentesAlInsertar(actuales, posible);
 
@@ -127,6 +143,9 @@ class TipoRojo extends Tipo {
 
   @override
   String get descripcion => 'Todos los números deben de ser distintos';
+
+  @override
+  String get reglaCorta => 'Todos ≠';
 
   @override
   bool esPosibleAgregar(List<int> actuales, int posible) =>
@@ -150,6 +169,9 @@ class TipoNaranja1a3 extends Tipo {
   String get descripcion => 'Solo números del 1 al 3';
 
   @override
+  String get reglaCorta => '1 a 3';
+
+  @override
   bool esPosibleAgregar(List<int> actuales, int posible) =>
       numeroEnRangoAlInsertar(actuales, posible, 1, 3);
 
@@ -169,6 +191,9 @@ class TipoNaranja4a6 extends Tipo {
 
   @override
   String get descripcion => 'Solo números del 4 al 6';
+
+  @override
+  String get reglaCorta => '4 a 6';
 
   @override
   bool esPosibleAgregar(List<int> actuales, int posible) =>

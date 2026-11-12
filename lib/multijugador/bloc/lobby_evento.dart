@@ -1,8 +1,19 @@
 import '../dominio/estado_sala_multijugador.dart';
 import '../dominio/estados_jugador_sala.dart';
+import '../dominio/mensajes_protocolo.dart';
 
 abstract class LobbyEvento {
   const LobbyEvento();
+}
+
+class EnviarMensajeChatLobby extends LobbyEvento {
+  final String texto;
+  const EnviarMensajeChatLobby(this.texto);
+}
+
+class MensajeChatRecibidoLobbyInterno extends LobbyEvento {
+  final MensajeChat mensaje;
+  const MensajeChatRecibidoLobbyInterno(this.mensaje);
 }
 
 class CambiarUrlServidorLobby extends LobbyEvento {

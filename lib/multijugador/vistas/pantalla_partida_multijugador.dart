@@ -4,6 +4,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../casilla_juego.dart';
 import '../../region.dart';
 import '../../widget_dado.dart';
+import '../../widgets/dialogo_como_jugar.dart';
 import '../../widgets/selector_valor_inicial_sheet.dart';
 import '../bloc/partida_multijugador_bloc.dart';
 import '../bloc/partida_multijugador_estado.dart';
@@ -11,6 +12,7 @@ import '../bloc/partida_multijugador_evento.dart';
 import '../dominio/estados_jugador_sala.dart';
 import '../widgets/banner_conexion_red.dart';
 import '../widgets/barra_marcador_jugadores.dart';
+import '../widgets/dialogo_chat_multijugador.dart';
 import '../widgets/dialogo_conceder_partida.dart';
 import '../widgets/panel_carrera_regiones.dart';
 import '../widgets/vista_podio_multijugador.dart';
@@ -67,6 +69,13 @@ class _PantallaPartidaMultijugadorState
     );
   }
 
+  void _abrirChat(BuildContext context) {
+    DialogoChatMultijugador.mostrarParaPartida(
+      context: context,
+      partidaBloc: context.read<PartidaMultijugadorBloc>(),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return BlocConsumer<PartidaMultijugadorBloc, PartidaMultijugadorEstado>(
@@ -107,20 +116,29 @@ class _PantallaPartidaMultijugadorState
                   )
                 : null,
             actions: [
+              IconButton(
+                key: const Key('boton_como_jugar_partida_multi'),
+                tooltip: '¿Cómo jugar?',
+                icon: const Icon(Icons.help_outline_rounded),
+                onPressed: () => DialogoComoJugar.mostrar(context),
+              ),
+              IconButton(
+                key: const Key('boton_abrir_chat_partida'),
+                tooltip: 'Chat de la Sala',
+                icon: Badge(
+                  isLabelVisible: state.historialChat.isNotEmpty,
+                  label: Text('${state.historialChat.length}'),
+                  child: const Icon(Icons.chat_bubble_outline_rounded),
+                ),
+                onPressed: () => _abrirChat(context),
+              ),
               if (enCursoActivo)
-                TextButton.icon(
+                IconButton(
                   key: const Key('boton_conceder_partida'),
+                  tooltip: 'Conceder partida',
                   onPressed: () => _intentarConceder(context),
                   icon: Icon(Icons.flag_rounded,
-                      size: 18, color: Colors.red.shade700),
-                  label: Text(
-                    'Conceder',
-                    style: TextStyle(
-                      fontSize: 12.5,
-                      fontWeight: FontWeight.w800,
-                      color: Colors.red.shade700,
-                    ),
-                  ),
+                      size: 20, color: Colors.red.shade700),
                 ),
             ],
           ),
@@ -320,6 +338,8 @@ class _PantallaPartidaMultijugadorState
                 estado:
                     valor != null ? EstadoCasilla.usado : EstadoCasilla.sinUsar,
                 valor: valor,
+                reglaCorta: celda?.region.tipo.reglaCorta,
+                tieneEstrella: esEstrella,
               ),
               if (esEstrella && valor == null)
                 const FittedBox(
@@ -361,13 +381,17 @@ class _PantallaPartidaMultijugadorState
     } else if (!state.hayJugadasDisponibles) {
       instruccionRonda =
           'Sin jugadas posibles con [$d1] y [$d2]. Pulsa "Pasar Turno".';
+    } else if (state.indiceDadoSeleccionado != null) {
+      instruccionRonda = state.casillasValidas.isNotEmpty
+          ? 'Toca una casilla verde para colocar el ${state.numeroAColocar} (vecina al ${state.indiceDadoSeleccionado == 1 ? d2 : d1}).'
+          : 'No hay casillas válidas para colocar el ${state.numeroAColocar} adyacente a un ${state.indiceDadoSeleccionado == 1 ? d2 : d1}.';
     } else if (state.anclaSeleccionada != null) {
       instruccionRonda = state.casillasValidas.isNotEmpty
           ? 'Toca una casilla iluminada en verde para colocar el ${state.numeroAColocar}.'
           : 'Esa ancla no tiene vecinas legales para el ${state.numeroAColocar}. Elige otra.';
     } else {
       instruccionRonda =
-          'Dados [$d1] y [$d2]: toca una casilla con valor $d1 o $d2 como ancla.';
+          'Toca un dado [$d1 o $d2] o selecciona una casilla ancla en el tablero.';
     }
 
     return SafeArea(
@@ -454,15 +478,29 @@ class _PantallaPartidaMultijugadorState
                             WidgetDado(
                               key: const Key('multi_dado_1'),
                               valor: d1,
-                              esNumeroAColocar: dado1Colocar,
+                              seleccionado: state.indiceDadoSeleccionado == 1,
+                              esNumeroAColocar: state.indiceDadoSeleccionado == 1 || dado1Colocar,
                               tamano: 44,
+                              onTap: state.puedeInteractuarConTablero
+                                  ? () => context
+                                      .read<PartidaMultijugadorBloc>()
+                                      .add(SeleccionarDadoMultijugador(
+                                          indiceDado: 1, valor: d1))
+                                  : null,
                             ),
                             const SizedBox(width: 8),
                             WidgetDado(
                               key: const Key('multi_dado_2'),
                               valor: d2,
-                              esNumeroAColocar: dado2Colocar,
+                              seleccionado: state.indiceDadoSeleccionado == 2,
+                              esNumeroAColocar: state.indiceDadoSeleccionado == 2 || dado2Colocar,
                               tamano: 44,
+                              onTap: state.puedeInteractuarConTablero
+                                  ? () => context
+                                      .read<PartidaMultijugadorBloc>()
+                                      .add(SeleccionarDadoMultijugador(
+                                          indiceDado: 2, valor: d2))
+                                  : null,
                             ),
                           ],
                         ),
@@ -474,7 +512,8 @@ class _PantallaPartidaMultijugadorState
                             child: Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                if (state.anclaSeleccionada != null)
+                                if (state.anclaSeleccionada != null ||
+                                    state.indiceDadoSeleccionado != null)
                                   Padding(
                                     padding: const EdgeInsets.only(right: 6.0),
                                     child: OutlinedButton(
@@ -483,7 +522,7 @@ class _PantallaPartidaMultijugadorState
                                           .read<PartidaMultijugadorBloc>()
                                           .add(
                                               const DeseleccionarAnclaMultijugador()),
-                                      child: const Text('Cancelar Ancla'),
+                                      child: const Text('Cancelar selección'),
                                     ),
                                   ),
                                 ElevatedButton.icon(
@@ -556,7 +595,7 @@ class _PantallaPartidaMultijugadorState
 
         final esAnclaSeleccionada = coord == state.anclaSeleccionada;
         final esAnclaElegible =
-            elegibles.contains(coord) && state.anclaSeleccionada == null;
+            elegibles.contains(coord) && state.anclaSeleccionada == null && state.indiceDadoSeleccionado == null;
         final esLugarValido = state.casillasValidas.contains(coord);
         final regionCompleta = celda != null &&
             state.tableroLocal.esRegionCompleta(celda.region);
@@ -593,6 +632,8 @@ class _PantallaPartidaMultijugadorState
             esAnclaElegible: esAnclaElegible,
             esLugarValido: esLugarValido,
             valorPreview: esLugarValido ? state.numeroAColocar : null,
+            reglaCorta: celda?.region.tipo.reglaCorta,
+            tieneEstrella: state.nivel.casillasIniciales.contains(coord),
           ),
         );
       },

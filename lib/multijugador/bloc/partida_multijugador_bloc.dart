@@ -9,13 +9,14 @@ import '../../tablero.dart';
 import '../constantes_multijugador.dart';
 import '../dominio/estado_sala_multijugador.dart';
 import '../dominio/estados_jugador_sala.dart';
+import '../dominio/mensajes_protocolo.dart';
 import '../dominio/modelos_mapa.dart';
 import '../dominio/repositorio_multijugador.dart';
 import 'partida_multijugador_estado.dart';
 import 'partida_multijugador_evento.dart';
 
 /// BLoC enfocado en la partida multijugador activa (estrellas, dados sincronizados,
-/// concesión y recuperación ante desconexiones) reutilizando [Tablero] y [NivelDefinicion].
+/// chat en vivo, concesión y recuperación ante desconexiones) reutilizando [Tablero] y [NivelDefinicion].
 class PartidaMultijugadorBloc
     extends Bloc<PartidaMultijugadorEvento, PartidaMultijugadorEstado> {
   final RepositorioMultijugador _repositorio;
@@ -23,6 +24,7 @@ class PartidaMultijugadorBloc
   StreamSubscription<EstadoSalaMultijugador>? _subSala;
   StreamSubscription<EstadoConexionCliente>? _subConexion;
   StreamSubscription<FalloMultijugador>? _subErrores;
+  StreamSubscription<MensajeChat>? _subChat;
 
   PartidaMultijugadorBloc({
     required RepositorioMultijugador repositorio,
@@ -40,6 +42,7 @@ class PartidaMultijugadorBloc
     on<LimpiarEstrellasLocales>(_onLimpiarEstrellasLocales);
     on<LlenarEstrellasAleatoriasLocales>(_onLlenarAleatorias);
     on<ConfirmarEstrellasMultijugador>(_onConfirmarEstrellas);
+    on<SeleccionarDadoMultijugador>(_onSeleccionarDado);
     on<SeleccionarAnclaMultijugador>(_onSeleccionarAncla);
     on<DeseleccionarAnclaMultijugador>(_onDeseleccionarAncla);
     on<ColocarNumeroMultijugador>(_onColocarNumero);
@@ -48,6 +51,8 @@ class PartidaMultijugadorBloc
     on<ReintentarReconexionPartida>(_onReintentarReconexion);
     on<LimpiarAvisoPartida>(_onLimpiarAviso);
     on<AbandonarSalaMultijugador>(_onAbandonarSala);
+    on<EnviarMensajeChatPartida>(_onEnviarMensajeChat);
+    on<MensajeChatRecibidoPartidaInterno>(_onMensajeChatRecibido);
     on<EstadoSalaPartidaRecibidoInterno>(_onSalaRecibida);
     on<ConexionPartidaRecibidaInterna>(_onConexionRecibida);
     on<ErrorPartidaRecibidoInterno>(_onErrorRecibido);
@@ -60,6 +65,9 @@ class PartidaMultijugadorBloc
     );
     _subErrores = _repositorio.flujoErrores.listen(
       (err) => add(ErrorPartidaRecibidoInterno(err)),
+    );
+    _subChat = _repositorio.flujoChat.listen(
+      (msg) => add(MensajeChatRecibidoPartidaInterno(msg)),
     );
   }
 
@@ -159,6 +167,46 @@ class PartidaMultijugadorBloc
     }
   }
 
+  void _onSeleccionarDado(
+    SeleccionarDadoMultijugador event,
+    Emitter<PartidaMultijugadorEstado> emit,
+  ) {
+    if (state is! PartidaMultijugadorActiva) return;
+    final actual = state as PartidaMultijugadorActiva;
+    if (!actual.puedeInteractuarConTablero) return;
+
+    if (actual.indiceDadoSeleccionado == event.indiceDado) {
+      emit(actual.copiarCon(
+        limpiarDadoSeleccionado: true,
+        limpiarAncla: true,
+        limpiarNumero: true,
+        casillasValidas: const {},
+        limpiarAviso: true,
+      ));
+      return;
+    }
+
+    final d1 = actual.sala.dado1;
+    final d2 = actual.sala.dado2;
+    if (d1 == null || d2 == null) return;
+
+    final numeroAColocar = event.valor;
+    final valorAncla = event.indiceDado == 1 ? d2 : d1;
+
+    final validas = actual.tableroLocal.obtenerPosiblesLugaresParaDado(
+      numeroAColocar: numeroAColocar,
+      valorAncla: valorAncla,
+    );
+
+    emit(actual.copiarCon(
+      indiceDadoSeleccionado: event.indiceDado,
+      numeroAColocar: numeroAColocar,
+      casillasValidas: validas,
+      limpiarAncla: true,
+      limpiarAviso: true,
+    ));
+  }
+
   void _onSeleccionarAncla(
     SeleccionarAnclaMultijugador event,
     Emitter<PartidaMultijugadorEstado> emit,
@@ -193,6 +241,7 @@ class PartidaMultijugadorBloc
     }
 
     final numeroAColocar = (valorAncla == d1) ? d2 : d1;
+    final indiceDado = (valorAncla == d1) ? 2 : 1;
     final validas = actual.tableroLocal.obtenerPosiblesLugaresParaAncla(
       event.coordenada,
       numeroAColocar,
@@ -201,6 +250,7 @@ class PartidaMultijugadorBloc
     emit(
       actual.copiarCon(
         anclaSeleccionada: event.coordenada,
+        indiceDadoSeleccionado: indiceDado,
         numeroAColocar: numeroAColocar,
         casillasValidas: validas,
         limpiarAviso: true,
@@ -217,6 +267,7 @@ class PartidaMultijugadorBloc
     emit(
       actual.copiarCon(
         limpiarAncla: true,
+        limpiarDadoSeleccionado: true,
         limpiarNumero: true,
         casillasValidas: const {},
         limpiarAviso: true,
@@ -232,11 +283,8 @@ class PartidaMultijugadorBloc
     final actual = state as PartidaMultijugadorActiva;
     if (!actual.puedeInteractuarConTablero) return;
 
-    final ancla = actual.anclaSeleccionada;
     final numero = actual.numeroAColocar;
-    if (ancla == null ||
-        numero == null ||
-        !actual.casillasValidas.contains(event.destino)) {
+    if (numero == null || !actual.casillasValidas.contains(event.destino)) {
       emit(
         actual.copiarCon(
           mensajeAviso: 'Toca una casilla iluminada en verde válida.',
@@ -245,16 +293,40 @@ class PartidaMultijugadorBloc
       return;
     }
 
+    PosicionMapa? anclaPos;
+    if (actual.anclaSeleccionada != null) {
+      anclaPos = PosicionMapa(
+        actual.anclaSeleccionada!.x,
+        actual.anclaSeleccionada!.y,
+      );
+    } else {
+      final d1 = actual.sala.dado1!;
+      final d2 = actual.sala.dado2!;
+      final anclaRequerida = numero == d1 ? d2 : d1;
+      for (final vecino in actual.tableroLocal.obtenerVecinosOrtogonales(event.destino)) {
+        if (actual.tableroLocal.celdas[vecino]?.valor == anclaRequerida) {
+          anclaPos = PosicionMapa(vecino.x, vecino.y);
+          break;
+        }
+      }
+    }
+
+    if (anclaPos == null) {
+      emit(actual.copiarCon(mensajeAviso: 'No se encontró un ancla adyacente válida.'));
+      return;
+    }
+
     try {
       await _repositorio.colocarNumeroEnRonda(
         ronda: actual.sala.rondaActual,
-        ancla: PosicionMapa(ancla.x, ancla.y),
+        ancla: anclaPos,
         destino: PosicionMapa(event.destino.x, event.destino.y),
         valorColocado: numero,
       );
       emit(
         actual.copiarCon(
           limpiarAncla: true,
+          limpiarDadoSeleccionado: true,
           limpiarNumero: true,
           casillasValidas: const {},
           limpiarAviso: true,
@@ -278,6 +350,7 @@ class PartidaMultijugadorBloc
       emit(
         actual.copiarCon(
           limpiarAncla: true,
+          limpiarDadoSeleccionado: true,
           limpiarNumero: true,
           casillasValidas: const {},
           limpiarAviso: true,
@@ -299,6 +372,7 @@ class PartidaMultijugadorBloc
       emit(
         actual.copiarCon(
           limpiarAncla: true,
+          limpiarDadoSeleccionado: true,
           limpiarNumero: true,
           casillasValidas: const {},
           limpiarAviso: true,
@@ -339,6 +413,30 @@ class PartidaMultijugadorBloc
     emit(const PartidaMultijugadorCerrada());
   }
 
+  Future<void> _onEnviarMensajeChat(
+    EnviarMensajeChatPartida event,
+    Emitter<PartidaMultijugadorEstado> emit,
+  ) async {
+    if (event.texto.trim().isEmpty) return;
+    try {
+      await _repositorio.enviarMensajeChat(event.texto.trim());
+    } on FalloMultijugador catch (f) {
+      if (state is PartidaMultijugadorActiva) {
+        emit((state as PartidaMultijugadorActiva).copiarCon(mensajeAviso: f.mensaje));
+      }
+    }
+  }
+
+  void _onMensajeChatRecibido(
+    MensajeChatRecibidoPartidaInterno event,
+    Emitter<PartidaMultijugadorEstado> emit,
+  ) {
+    if (state is! PartidaMultijugadorActiva) return;
+    final actual = state as PartidaMultijugadorActiva;
+    final nuevoHistorial = List<MensajeChat>.from(actual.historialChat)..add(event.mensaje);
+    emit(actual.copiarCon(historialChat: nuevoHistorial));
+  }
+
   void _onSalaRecibida(
     EstadoSalaPartidaRecibidoInterno event,
     Emitter<PartidaMultijugadorEstado> emit,
@@ -358,13 +456,15 @@ class PartidaMultijugadorBloc
       sala: event.sala,
       conexion: _repositorio.estadoConexionActual,
       borradorPrevio: previo?.estrellasBorrador,
+      historialPrevio: previo?.historialChat,
     );
 
-    // Preservar selección activa de ancla durante ticks del reloj en la misma ronda
-    if (!nuevaRondaOFase && previo.anclaSeleccionada != null) {
+    // Preservar selección activa de ancla o dado durante ticks del reloj en la misma ronda
+    if (!nuevaRondaOFase && (previo.anclaSeleccionada != null || previo.indiceDadoSeleccionado != null)) {
       emit(
         base.copiarCon(
           anclaSeleccionada: previo.anclaSeleccionada,
+          indiceDadoSeleccionado: previo.indiceDadoSeleccionado,
           numeroAColocar: previo.numeroAColocar,
           casillasValidas: previo.casillasValidas,
         ),
@@ -402,6 +502,7 @@ class PartidaMultijugadorBloc
     required EstadoSalaMultijugador sala,
     required EstadoConexionCliente conexion,
     Map<Coordenada, int>? borradorPrevio,
+    List<MensajeChat>? historialPrevio,
   }) {
     final nivel = CatalogoNiveles.porId(sala.nivelId);
     final tablero = nivel.crearTablero();
@@ -434,6 +535,7 @@ class PartidaMultijugadorBloc
       conexion: conexion,
       estrellasBorrador: borrador,
       hayJugadasDisponibles: hayJugadas,
+      historialChat: historialPrevio ?? const [],
     );
   }
 
@@ -458,6 +560,7 @@ class PartidaMultijugadorBloc
     await _subSala?.cancel();
     await _subConexion?.cancel();
     await _subErrores?.cancel();
+    await _subChat?.cancel();
     return super.close();
   }
 }

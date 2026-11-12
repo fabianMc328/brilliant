@@ -8,6 +8,7 @@ class PanelDados extends StatelessWidget {
   final VoidCallback onTirarDados;
   final VoidCallback onCancelarAncla;
   final VoidCallback onPasarTurno;
+  final void Function(int indiceDado, int valor)? onSeleccionarDado;
 
   const PanelDados({
     super.key,
@@ -15,14 +16,15 @@ class PanelDados extends StatelessWidget {
     required this.onTirarDados,
     required this.onCancelarAncla,
     required this.onPasarTurno,
+    this.onSeleccionarDado,
   });
 
   @override
   Widget build(BuildContext context) {
-    final bool dado1EsNumeroAColocar =
-        state.anclaSeleccionada != null && state.numeroAColocar == state.dado1;
-    final bool dado2EsNumeroAColocar =
-        state.anclaSeleccionada != null && state.numeroAColocar == state.dado2;
+    final bool dado1EsNumeroAColocar = state.indiceDadoSeleccionado == 1 ||
+        (state.anclaSeleccionada != null && state.numeroAColocar == state.dado1);
+    final bool dado2EsNumeroAColocar = state.indiceDadoSeleccionado == 2 ||
+        (state.anclaSeleccionada != null && state.numeroAColocar == state.dado2);
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 14.0, vertical: 6.0),
@@ -31,9 +33,14 @@ class PanelDados extends StatelessWidget {
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(20),
+          border: state.debeTirarDados
+              ? Border.all(color: Colors.amber.shade400, width: 2)
+              : null,
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withValues(alpha: 0.06),
+              color: state.debeTirarDados
+                  ? Colors.amber.withValues(alpha: 0.15)
+                  : Colors.black.withValues(alpha: 0.06),
               blurRadius: 10,
               offset: const Offset(0, 3),
             )
@@ -42,7 +49,7 @@ class PanelDados extends StatelessWidget {
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            // Sección de Dados
+            // Sección de Dados (Tocar dado para seleccionarlo)
             Row(
               mainAxisSize: MainAxisSize.min,
               children: [
@@ -52,8 +59,12 @@ class PanelDados extends StatelessWidget {
                     WidgetDado(
                       key: const Key('dado_1'),
                       valor: state.dado1,
+                      seleccionado: state.indiceDadoSeleccionado == 1,
                       esNumeroAColocar: dado1EsNumeroAColocar,
                       tamano: 48,
+                      onTap: onSeleccionarDado != null
+                          ? () => onSeleccionarDado!(1, state.dado1)
+                          : null,
                     ),
                     const SizedBox(height: 3),
                     Text(
@@ -75,8 +86,12 @@ class PanelDados extends StatelessWidget {
                     WidgetDado(
                       key: const Key('dado_2'),
                       valor: state.dado2,
+                      seleccionado: state.indiceDadoSeleccionado == 2,
                       esNumeroAColocar: dado2EsNumeroAColocar,
                       tamano: 48,
+                      onTap: onSeleccionarDado != null
+                          ? () => onSeleccionarDado!(2, state.dado2)
+                          : null,
                     ),
                     const SizedBox(height: 3),
                     Text(
@@ -103,20 +118,41 @@ class PanelDados extends StatelessWidget {
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    if (state.anclaSeleccionada != null) ...[
+                    if (state.anclaSeleccionada != null ||
+                        state.indiceDadoSeleccionado != null) ...[
                       TextButton.icon(
                         key: const Key('boton_cancelar_ancla'),
                         onPressed: onCancelarAncla,
                         icon: const Icon(Icons.close, size: 18),
-                        label: const Text('Cancelar ancla'),
+                        label: const Text('Cancelar selección'),
                         style: TextButton.styleFrom(
                           foregroundColor: Colors.red.shade700,
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 10, vertical: 8),
                         ),
                       ),
                       const SizedBox(width: 4),
                     ],
-                    if (!state.hayJugadasDisponibles)
+                    if (state.debeTirarDados)
+                      ElevatedButton.icon(
+                        key: const Key('boton_tirar_dados'),
+                        onPressed: onTirarDados,
+                        icon: const Icon(Icons.casino, size: 20),
+                        label: const Text('Tirar Dados Obligatorio'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF059669),
+                          foregroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          elevation: 3,
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 12,
+                          ),
+                        ),
+                      )
+                    else if (!state.hayJugadasDisponibles)
                       ElevatedButton.icon(
                         key: const Key('boton_pasar_turno'),
                         onPressed: onPasarTurno,

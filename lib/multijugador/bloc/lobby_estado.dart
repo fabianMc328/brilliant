@@ -1,5 +1,6 @@
 import '../dominio/estado_sala_multijugador.dart';
 import '../dominio/estados_jugador_sala.dart';
+import '../dominio/mensajes_protocolo.dart';
 
 abstract class LobbyEstado {
   final String urlServidor;
@@ -41,18 +42,21 @@ class LobbyCargando extends LobbyEstado {
 class LobbyEnSalaEspera extends LobbyEstado {
   final EstadoSalaMultijugador sala;
   final EstadoConexionCliente conexion;
+  final List<MensajeChat> historialChat;
   final String? avisoError;
 
   const LobbyEnSalaEspera({
     required super.urlServidor,
     required this.sala,
     required this.conexion,
+    this.historialChat = const [],
     this.avisoError,
   });
 
   LobbyEnSalaEspera copiarCon({
     EstadoSalaMultijugador? sala,
     EstadoConexionCliente? conexion,
+    List<MensajeChat>? historialChat,
     String? avisoError,
     bool limpiarAviso = false,
   }) {
@@ -60,6 +64,7 @@ class LobbyEnSalaEspera extends LobbyEstado {
       urlServidor: urlServidor,
       sala: sala ?? this.sala,
       conexion: conexion ?? this.conexion,
+      historialChat: historialChat ?? this.historialChat,
       avisoError: limpiarAviso ? null : (avisoError ?? this.avisoError),
     );
   }

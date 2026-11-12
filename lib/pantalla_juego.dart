@@ -5,11 +5,13 @@ import 'casilla_juego.dart';
 import 'niveles/catalogo_niveles.dart';
 import 'niveles/nivel_definicion.dart';
 import 'region.dart';
+import 'tablero.dart';
 import 'juego_bloc.dart';
 import 'juego_evento.dart';
 import 'juego_estado.dart';
 import 'widgets/panel_puntuacion.dart';
 import 'widgets/banner_instruccion.dart';
+import 'widgets/dialogo_como_jugar.dart';
 import 'widgets/panel_dados.dart';
 import 'widgets/selector_valor_inicial_sheet.dart';
 
@@ -25,6 +27,7 @@ class PantallaJuego extends StatefulWidget {
 
 class _PantallaJuegoState extends State<PantallaJuego> {
   late final NivelDefinicion nivelActivo;
+  late final Tablero tableroRef;
   late final List<List<Color>> coloresTablero;
   late final List<Coordenada> casillasIniciales;
 
@@ -34,7 +37,7 @@ class _PantallaJuegoState extends State<PantallaJuego> {
     nivelActivo = widget.nivel ?? CatalogoNiveles.nivel1;
     casillasIniciales = nivelActivo.casillasIniciales;
 
-    final tableroRef = nivelActivo.crearTablero();
+    tableroRef = nivelActivo.crearTablero();
 
     coloresTablero = List.generate(7, (fila) {
       return List.generate(7, (columna) {
@@ -185,6 +188,14 @@ class _PantallaJuegoState extends State<PantallaJuego> {
                 onPressed: () => Navigator.of(context).pop(),
               )
             : null,
+        actions: [
+          IconButton(
+            key: const Key('boton_como_jugar_fase1'),
+            tooltip: '¿Cómo jugar?',
+            icon: const Icon(Icons.help_outline_rounded),
+            onPressed: () => DialogoComoJugar.mostrar(context),
+          ),
+        ],
       ),
       body: SafeArea(
         child: LayoutBuilder(
@@ -287,6 +298,8 @@ class _PantallaJuegoState extends State<PantallaJuego> {
                                           ? EstadoCasilla.usado
                                           : EstadoCasilla.sinUsar,
                                       valor: valor,
+                                      reglaCorta: tableroRef.celdas[coord]?.region.tipo.reglaCorta,
+                                      tieneEstrella: esInicial,
                                     ),
                                     if (iconoEstrella != null) iconoEstrella,
                                   ],
@@ -410,6 +423,12 @@ class _PantallaJuegoState extends State<PantallaJuego> {
             : null,
         actions: [
           IconButton(
+            key: const Key('boton_como_jugar_fase2'),
+            tooltip: '¿Cómo jugar?',
+            icon: const Icon(Icons.help_outline_rounded),
+            onPressed: () => DialogoComoJugar.mostrar(context),
+          ),
+          IconButton(
             tooltip: 'Tirar dados de nuevo',
             icon: const Icon(Icons.refresh_rounded),
             onPressed: () => context.read<JuegoBloc>().add(TirarDados()),
@@ -525,6 +544,8 @@ class _PantallaJuegoState extends State<PantallaJuego> {
                                   esLugarValido: esLugarValido,
                                   valorPreview:
                                       esLugarValido ? state.numeroAColocar : null,
+                                  reglaCorta: celda?.region.tipo.reglaCorta,
+                                  tieneEstrella: nivelActivo.casillasIniciales.contains(coord),
                                 ),
                               );
                             },
@@ -544,6 +565,9 @@ class _PantallaJuegoState extends State<PantallaJuego> {
                       context.read<JuegoBloc>().add(DeseleccionarAncla()),
                   onPasarTurno: () =>
                       context.read<JuegoBloc>().add(PasarTurno()),
+                  onSeleccionarDado: (indice, valor) => context
+                      .read<JuegoBloc>()
+                      .add(SeleccionarDado(indiceDado: indice, valor: valor)),
                 ),
               ],
             );

@@ -85,6 +85,21 @@ class Tablero {
     return validos;
   }
 
+  /// Retorna todas las coordenadas donde es válido colocar [numeroAColocar] usando como ancla
+  /// cualquier casilla existente con valor [valorAncla].
+  Set<Coordenada> obtenerPosiblesLugaresParaDado({
+    required int numeroAColocar,
+    required int valorAncla,
+  }) {
+    final validos = <Coordenada>{};
+    for (final entry in celdas.entries) {
+      if (entry.value.valor == valorAncla) {
+        validos.addAll(obtenerPosiblesLugaresParaAncla(entry.key, numeroAColocar));
+      }
+    }
+    return validos;
+  }
+
   /// Calcula la puntuación total acumulada para las regiones completadas dadas.
   int calcularPuntuacionTotal(List<String> ordenCompletadas) {
     final desglose = calcularDesglosePuntos(ordenCompletadas);

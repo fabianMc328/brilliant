@@ -42,6 +42,8 @@ class ClienteWebsocketMultijugador implements RepositorioMultijugador {
       StreamController<EstadoConexionCliente>.broadcast();
   final StreamController<FalloMultijugador> _controladorErrores =
       StreamController<FalloMultijugador>.broadcast();
+  final StreamController<MensajeChat> _controladorChat =
+      StreamController<MensajeChat>.broadcast();
 
   ClienteWebsocketMultijugador({
     String urlInicial = ConstantesMultijugador.urlServidorLocalPorDefecto,
@@ -71,6 +73,9 @@ class ClienteWebsocketMultijugador implements RepositorioMultijugador {
 
   @override
   Stream<FalloMultijugador> get flujoErrores => _controladorErrores.stream;
+
+  @override
+  Stream<MensajeChat> get flujoChat => _controladorChat.stream;
 
   @override
   EstadoSalaMultijugador? get ultimoEstadoSala => _ultimoEstadoSala;
@@ -225,6 +230,16 @@ class ClienteWebsocketMultijugador implements RepositorioMultijugador {
   }
 
   @override
+  Future<void> enviarMensajeChat(String texto) async {
+    _enviarComandoSimple(
+      ComandoCliente(
+        tipo: TipoComandoCliente.enviarMensajeChat,
+        datos: {'texto': texto},
+      ),
+    );
+  }
+
+  @override
   Future<void> salirDeSala() async {
     _cerrandoVoluntariamente = true;
     _timerReconexion?.cancel();
@@ -252,6 +267,7 @@ class ClienteWebsocketMultijugador implements RepositorioMultijugador {
     if (!_controladorSala.isClosed) await _controladorSala.close();
     if (!_controladorConexion.isClosed) await _controladorConexion.close();
     if (!_controladorErrores.isClosed) await _controladorErrores.close();
+    if (!_controladorChat.isClosed) await _controladorChat.close();
   }
 
   // --- Gestión interna del canal, heartbeats y reconexión ---
@@ -351,6 +367,13 @@ class ClienteWebsocketMultijugador implements RepositorioMultijugador {
       _ultimoEstadoSala = evento.estadoSala;
       if (!_controladorSala.isClosed) {
         _controladorSala.add(evento.estadoSala!);
+      }
+    }
+
+    if (evento.tipo == TipoEventoServidor.mensajeChatRecibido &&
+        evento.mensajeChat != null) {
+      if (!_controladorChat.isClosed) {
+        _controladorChat.add(evento.mensajeChat!);
       }
     }
 

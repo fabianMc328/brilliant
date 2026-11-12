@@ -38,7 +38,7 @@ class ConstantesMultijugador {
   static const String urlServidorAndroidEmulador = 'ws://10.0.2.2:8080';
 
   static const int segundosFaseInicial = 60;
-  static const int segundosPorRonda = 45;
+  static const int segundosPorRonda = 60;
   static const int segundosGraciaReconexionPartida = 45;
   static const int segundosGraciaReconexionLobby = 20;
 

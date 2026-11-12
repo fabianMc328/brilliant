@@ -20,7 +20,9 @@ class CasillaJuego extends StatelessWidget {
     this.esAnclaElegible = false,
     this.esLugarValido = false,
     this.valorPreview,
-  }) : assert(
+    this.reglaCorta,
+    this.tieneEstrella = false,
+  })  : assert(
           valor == null || (valor >= 0 && valor <= 9),
           'El valor debe ser de un solo dígito (0 al 9) o null.',
         ),
@@ -35,6 +37,8 @@ class CasillaJuego extends StatelessWidget {
   final bool esAnclaElegible;
   final bool esLugarValido;
   final int? valorPreview;
+  final String? reglaCorta;
+  final bool tieneEstrella;
 
   Color _obtenerColorFondo() {
     if (esLugarValido) {
@@ -163,16 +167,29 @@ class CasillaJuego extends StatelessWidget {
                       ),
                     ),
                   )
-                : (esAnclaElegible
-                    ? Container(
-                        width: 8,
-                        height: 8,
-                        decoration: BoxDecoration(
-                          color: Colors.amber.shade700,
-                          shape: BoxShape.circle,
+                : Stack(
+                    alignment: Alignment.center,
+                    children: [
+                      if (tieneEstrella)
+                        const FittedBox(
+                          fit: BoxFit.scaleDown,
+                          child: Icon(
+                            Icons.star_rounded,
+                            size: 24,
+                            color: Colors.amber,
+                          ),
                         ),
-                      )
-                    : null)),
+                      if (esAnclaElegible && !tieneEstrella)
+                        Container(
+                          width: 8,
+                          height: 8,
+                          decoration: BoxDecoration(
+                            color: Colors.amber.shade700,
+                            shape: BoxShape.circle,
+                          ),
+                        ),
+                    ],
+                  )),
       ),
     );
   }

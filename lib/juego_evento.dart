@@ -38,6 +38,14 @@ class LimpiarValoresIniciales extends JuegoEvento {}
 // Tira los 2 dados.
 class TirarDados extends JuegoEvento {}
 
+// Elige directamente un dado para colocar su número en el tablero.
+class SeleccionarDado extends JuegoEvento {
+  final int indiceDado; // 1 para dado1, 2 para dado2
+  final int valor;
+
+  SeleccionarDado({required this.indiceDado, required this.valor});
+}
+
 // Elige una casilla como ancla.
 class SeleccionarAncla extends JuegoEvento {
   final Coordenada coordenada;

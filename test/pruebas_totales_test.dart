@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 
+import 'autenticacion/autenticacion_test.dart' as autenticacion_test;
 import 'dominio/reglas_test.dart' as reglas_test;
 import 'dominio/tipo_test.dart' as tipo_test;
 import 'dominio/region_test.dart' as region_test;
@@ -23,9 +24,14 @@ import 'multijugador/cliente_websocket_test.dart' as cliente_websocket_test;
 import 'multijugador/blocs_multijugador_test.dart' as blocs_multijugador_test;
 import 'multijugador/widgets_multijugador_test.dart'
     as widgets_multijugador_test;
+import 'multijugador/chat_y_dados_test.dart' as chat_y_dados_test;
 
-// Corre todas las pruebas del cliente Flutter (Solitario + Multijugador).
+// Corre todas las pruebas del cliente Flutter (Autenticación + Solitario + Multijugador).
 void main() {
+  group('Autenticación tradicional y sesión', () {
+    autenticacion_test.main();
+  });
+
   group('Reglas y lógica del tablero', () {
     reglas_test.main();
     tipo_test.main();
@@ -56,5 +62,6 @@ void main() {
     cliente_websocket_test.main();
     blocs_multijugador_test.main();
     widgets_multijugador_test.main();
+    chat_y_dados_test.main();
   });
 }

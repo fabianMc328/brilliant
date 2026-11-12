@@ -4,6 +4,7 @@ import '../../tablero.dart';
 import '../constantes_multijugador.dart';
 import '../dominio/estado_sala_multijugador.dart';
 import '../dominio/estados_jugador_sala.dart';
+import '../dominio/mensajes_protocolo.dart';
 
 abstract class PartidaMultijugadorEstado {
   const PartidaMultijugadorEstado();
@@ -17,10 +18,12 @@ class PartidaMultijugadorActiva extends PartidaMultijugadorEstado {
   final EstadoConexionCliente conexion;
   final Map<Coordenada, int> estrellasBorrador;
   final Coordenada? anclaSeleccionada;
+  final int? indiceDadoSeleccionado;
   final int? numeroAColocar;
   final Set<Coordenada> casillasValidas;
   final bool hayJugadasDisponibles;
   final String? mensajeAviso;
+  final List<MensajeChat> historialChat;
 
   const PartidaMultijugadorActiva({
     required this.sala,
@@ -29,10 +32,12 @@ class PartidaMultijugadorActiva extends PartidaMultijugadorEstado {
     required this.conexion,
     this.estrellasBorrador = const {},
     this.anclaSeleccionada,
+    this.indiceDadoSeleccionado,
     this.numeroAColocar,
     this.casillasValidas = const {},
     this.hayJugadasDisponibles = true,
     this.mensajeAviso,
+    this.historialChat = const [],
   });
 
   bool get estrellasCompletasParaConfirmar =>
@@ -69,12 +74,15 @@ class PartidaMultijugadorActiva extends PartidaMultijugadorEstado {
     Map<Coordenada, int>? estrellasBorrador,
     Coordenada? anclaSeleccionada,
     bool limpiarAncla = false,
+    int? indiceDadoSeleccionado,
+    bool limpiarDadoSeleccionado = false,
     int? numeroAColocar,
     bool limpiarNumero = false,
     Set<Coordenada>? casillasValidas,
     bool? hayJugadasDisponibles,
     String? mensajeAviso,
     bool limpiarAviso = false,
+    List<MensajeChat>? historialChat,
   }) {
     return PartidaMultijugadorActiva(
       sala: sala ?? this.sala,
@@ -84,12 +92,16 @@ class PartidaMultijugadorActiva extends PartidaMultijugadorEstado {
       estrellasBorrador: estrellasBorrador ?? this.estrellasBorrador,
       anclaSeleccionada:
           limpiarAncla ? null : (anclaSeleccionada ?? this.anclaSeleccionada),
+      indiceDadoSeleccionado: limpiarDadoSeleccionado
+          ? null
+          : (indiceDadoSeleccionado ?? this.indiceDadoSeleccionado),
       numeroAColocar:
           limpiarNumero ? null : (numeroAColocar ?? this.numeroAColocar),
       casillasValidas: casillasValidas ?? this.casillasValidas,
       hayJugadasDisponibles:
           hayJugadasDisponibles ?? this.hayJugadasDisponibles,
       mensajeAviso: limpiarAviso ? null : (mensajeAviso ?? this.mensajeAviso),
+      historialChat: historialChat ?? this.historialChat,
     );
   }
 }

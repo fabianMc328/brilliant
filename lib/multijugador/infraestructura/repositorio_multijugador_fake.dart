@@ -4,6 +4,7 @@ import '../constantes_multijugador.dart';
 import '../dominio/estado_sala_multijugador.dart';
 import '../dominio/estados_jugador_sala.dart';
 import '../dominio/jugador_multijugador.dart';
+import '../dominio/mensajes_protocolo.dart';
 import '../dominio/modelos_mapa.dart';
 import '../dominio/repositorio_multijugador.dart';
 
@@ -16,6 +17,8 @@ class RepositorioMultijugadorFake implements RepositorioMultijugador {
       StreamController<EstadoConexionCliente>.broadcast();
   final StreamController<FalloMultijugador> _erroresCtrl =
       StreamController<FalloMultijugador>.broadcast();
+  final StreamController<MensajeChat> _chatCtrl =
+      StreamController<MensajeChat>.broadcast();
 
   EstadoSalaMultijugador? _ultimoEstado;
   EstadoConexionCliente _conexion = const EstadoConexionCliente.desconectado();
@@ -37,6 +40,9 @@ class RepositorioMultijugadorFake implements RepositorioMultijugador {
 
   @override
   Stream<FalloMultijugador> get flujoErrores => _erroresCtrl.stream;
+
+  @override
+  Stream<MensajeChat> get flujoChat => _chatCtrl.stream;
 
   @override
   EstadoSalaMultijugador? get ultimoEstadoSala => _ultimoEstado;
@@ -220,6 +226,24 @@ class RepositorioMultijugadorFake implements RepositorioMultijugador {
   }
 
   @override
+  Future<void> enviarMensajeChat(String texto) async {
+    _lanzarSiHayFallo();
+    final mensaje = MensajeChat(
+      id: 'msg_fake_${DateTime.now().millisecondsSinceEpoch}',
+      codigoSala: _ultimoEstado?.codigoSala ?? 'TEST01',
+      remitenteId: _ultimoEstado?.miJugadorId ?? 'jug_fake',
+      remitenteApodo: _ultimoEstado?.miResumen?.apodo ?? 'Jugador',
+      texto: texto,
+      fecha: DateTime.now(),
+    );
+    _chatCtrl.add(mensaje);
+  }
+
+  void emitirMensajeChat(MensajeChat msg) {
+    if (!_chatCtrl.isClosed) _chatCtrl.add(msg);
+  }
+
+  @override
   Future<void> salirDeSala() async {
     salirFueLlamado = true;
     _ultimoEstado = null;
@@ -231,6 +255,7 @@ class RepositorioMultijugadorFake implements RepositorioMultijugador {
     await _salaCtrl.close();
     await _conexionCtrl.close();
     await _erroresCtrl.close();
+    await _chatCtrl.close();
   }
 
   void _lanzarSiHayFallo() {

@@ -11,11 +11,13 @@ import '../constantes_multijugador.dart';
 class VistaAccesoSala extends StatefulWidget {
   final String urlServidorActual;
   final String? mensajeError;
+  final String? apodoInicial;
 
   const VistaAccesoSala({
     super.key,
     required this.urlServidorActual,
     this.mensajeError,
+    this.apodoInicial,
   });
 
   @override
@@ -23,7 +25,7 @@ class VistaAccesoSala extends StatefulWidget {
 }
 
 class _VistaAccesoSalaState extends State<VistaAccesoSala> {
-  final TextEditingController _apodoCtrl = TextEditingController();
+  late final TextEditingController _apodoCtrl;
   final TextEditingController _codigoCtrl = TextEditingController();
   late final TextEditingController _urlCtrl;
   String _nivelInicialSeleccionado = 'nivel_1';
@@ -32,6 +34,7 @@ class _VistaAccesoSalaState extends State<VistaAccesoSala> {
   @override
   void initState() {
     super.initState();
+    _apodoCtrl = TextEditingController(text: widget.apodoInicial ?? '');
     _urlCtrl = TextEditingController(text: widget.urlServidorActual);
   }
 

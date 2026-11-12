@@ -20,6 +20,7 @@ class JuegoBloc extends Bloc<JuegoEvento, JuegoEstado> {
     on<LimpiarValoresIniciales>(_onLimpiarValoresIniciales);
     on<AvanzarJuego>(_onAvanzarJuego);
     on<TirarDados>(_onTirarDados);
+    on<SeleccionarDado>(_onSeleccionarDado);
     on<SeleccionarAncla>(_onSeleccionarAncla);
     on<ColocarNumero>(_onColocarNumero);
     on<DeseleccionarAncla>(_onDeseleccionarAncla);
@@ -159,11 +160,13 @@ class JuegoBloc extends Bloc<JuegoEvento, JuegoEstado> {
         nivel: estadoActual.nivel,
         dado1: d1,
         dado2: d2,
+        debeTirarDados: false,
         hayJugadasDisponibles: hayJugadas,
         turno: 1,
         puntuacionTotal: 0,
         regionesCompletadasIds: const [],
         desglosePuntos: const {},
+        mensajeFeedback: '¡Partida lista! Toca un dado para colocar su número.',
       ));
     }
   }
@@ -179,15 +182,71 @@ class JuegoBloc extends Bloc<JuegoEvento, JuegoEstado> {
       final hayJugadas = _hayJugadasPosibles(actual.tablero, d1, d2);
 
       emit(actual.copiarCon(
+        turno: actual.debeTirarDados ? actual.turno + 1 : actual.turno,
         dado1: d1,
         dado2: d2,
+        debeTirarDados: false,
+        limpiarDadoSeleccionado: true,
         limpiarAncla: true,
         limpiarNumeroAColocar: true,
         casillasValidas: {},
         hayJugadasDisponibles: hayJugadas,
-        limpiarFeedback: true,
+        mensajeFeedback: 'Dados tirados: $d1 y $d2. Toca un dado para colocar su número.',
       ));
     }
+  }
+
+  void _onSeleccionarDado(
+    SeleccionarDado event,
+    Emitter<JuegoEstado> emit,
+  ) {
+    if (state is! JuegoEnProgreso) return;
+    final actual = state as JuegoEnProgreso;
+
+    if (actual.debeTirarDados) {
+      emit(actual.copiarCon(
+        mensajeFeedback: 'Debes presionar obligatoriamente "Tirar Dados" para tu siguiente turno.',
+      ));
+      return;
+    }
+
+    // Si ya estaba seleccionado el mismo dado, deseleccionarlo
+    if (actual.indiceDadoSeleccionado == event.indiceDado) {
+      emit(actual.copiarCon(
+        limpiarDadoSeleccionado: true,
+        limpiarAncla: true,
+        limpiarNumeroAColocar: true,
+        casillasValidas: {},
+        mensajeFeedback: 'Dado deseleccionado. Elige un dado para jugar.',
+      ));
+      return;
+    }
+
+    final numeroAColocar = event.valor;
+    final valorAnclaRequerido =
+        event.indiceDado == 1 ? actual.dado2 : actual.dado1;
+
+    final validas = actual.tablero.obtenerPosiblesLugaresParaDado(
+      numeroAColocar: numeroAColocar,
+      valorAncla: valorAnclaRequerido,
+    );
+
+    String feedback;
+    if (validas.isEmpty) {
+      feedback =
+          'No hay casillas válidas para colocar el $numeroAColocar con anclas de valor $valorAnclaRequerido.';
+    } else {
+      feedback =
+          'Dado $numeroAColocar seleccionado. Toca una casilla iluminada en verde para colocarlo.';
+    }
+
+    emit(actual.copiarCon(
+      indiceDadoSeleccionado: event.indiceDado,
+      numeroAColocar: numeroAColocar,
+      casillasValidas: validas,
+      limpiarAncla: true,
+      mensajeFeedback: feedback,
+    ));
   }
 
   void _onSeleccionarAncla(
@@ -196,8 +255,15 @@ class JuegoBloc extends Bloc<JuegoEvento, JuegoEstado> {
   ) {
     if (state is JuegoEnProgreso) {
       final actual = state as JuegoEnProgreso;
-      final celda = actual.tablero.celdas[event.coordenada];
 
+      if (actual.debeTirarDados) {
+        emit(actual.copiarCon(
+          mensajeFeedback: 'Debes presionar obligatoriamente "Tirar Dados" para tu siguiente turno.',
+        ));
+        return;
+      }
+
+      final celda = actual.tablero.celdas[event.coordenada];
       if (celda == null || celda.estaVacia) {
         emit(actual.copiarCon(
           mensajeFeedback: 'Debes seleccionar una casilla ocupada como ancla.',
@@ -218,10 +284,13 @@ class JuegoBloc extends Bloc<JuegoEvento, JuegoEstado> {
 
       // El otro dado es el número que vamos a poner.
       final int numeroAColocar;
+      final int indiceDado;
       if (valorAncla == actual.dado1) {
         numeroAColocar = actual.dado2;
+        indiceDado = 2;
       } else {
         numeroAColocar = actual.dado1;
+        indiceDado = 1;
       }
 
       // Busca casillas vecinas donde sea legal meter el número.
@@ -239,6 +308,7 @@ class JuegoBloc extends Bloc<JuegoEvento, JuegoEstado> {
 
       emit(actual.copiarCon(
         anclaSeleccionada: event.coordenada,
+        indiceDadoSeleccionado: indiceDado,
         numeroAColocar: numeroAColocar,
         casillasValidas: validas,
         mensajeFeedback: feedback,
@@ -252,6 +322,13 @@ class JuegoBloc extends Bloc<JuegoEvento, JuegoEstado> {
   ) {
     if (state is JuegoEnProgreso) {
       final actual = state as JuegoEnProgreso;
+
+      if (actual.debeTirarDados) {
+        emit(actual.copiarCon(
+          mensajeFeedback: 'Debes presionar "Tirar Dados" para tu siguiente turno.',
+        ));
+        return;
+      }
 
       if (actual.numeroAColocar == null ||
           !actual.casillasValidas.contains(event.coordenada)) {
@@ -289,24 +366,20 @@ class JuegoBloc extends Bloc<JuegoEvento, JuegoEstado> {
       final nuevoDesglose =
           actual.tablero.calcularDesglosePuntos(completadas);
 
-      // Tira dados nuevos pal siguiente turno.
-      final nuevoD1 = _random.nextInt(6) + 1;
-      final nuevoD2 = _random.nextInt(6) + 1;
-      final hayJugadas = _hayJugadasPosibles(actual.tablero, nuevoD1, nuevoD2);
-
+      // Requerimiento explícito: Una vez puesto el dado, debe volver a picarle
+      // obligatoriamente al botón de tirar dados para generar otros dos números.
       emit(actual.copiarCon(
-        turno: actual.turno + 1,
-        dado1: nuevoD1,
-        dado2: nuevoD2,
         limpiarAncla: true,
         limpiarNumeroAColocar: true,
+        limpiarDadoSeleccionado: true,
         casillasValidas: {},
+        debeTirarDados: true,
         puntuacionTotal: nuevaPuntuacion,
         regionesCompletadasIds: completadas,
         desglosePuntos: nuevoDesglose,
-        hayJugadasDisponibles: hayJugadas,
-        mensajeFeedback:
-            avisoCompletada ?? '¡Número colocado! Nuevos dados tirados.',
+        mensajeFeedback: avisoCompletada != null
+            ? '$avisoCompletada ¡Tira los dados para tu siguiente turno!'
+            : '¡Número colocado! Presiona obligatoriamente "Tirar Dados" para continuar.',
       ));
     }
   }
@@ -320,6 +393,7 @@ class JuegoBloc extends Bloc<JuegoEvento, JuegoEstado> {
       emit(actual.copiarCon(
         limpiarAncla: true,
         limpiarNumeroAColocar: true,
+        limpiarDadoSeleccionado: true,
         casillasValidas: {},
         limpiarFeedback: true,
       ));
@@ -340,11 +414,13 @@ class JuegoBloc extends Bloc<JuegoEvento, JuegoEstado> {
         turno: actual.turno + 1,
         dado1: nuevoD1,
         dado2: nuevoD2,
+        debeTirarDados: false,
+        limpiarDadoSeleccionado: true,
         limpiarAncla: true,
         limpiarNumeroAColocar: true,
         casillasValidas: {},
         hayJugadasDisponibles: hayJugadas,
-        mensajeFeedback: 'Turno pasado. Nuevos dados: $nuevoD1 y $nuevoD2',
+        mensajeFeedback: 'Turno pasado. Nuevos dados: $nuevoD1 y $nuevoD2.',
       ));
     }
   }
