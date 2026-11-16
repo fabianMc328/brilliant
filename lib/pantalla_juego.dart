@@ -30,6 +30,7 @@ class _PantallaJuegoState extends State<PantallaJuego> {
   late final Tablero tableroRef;
   late final List<List<Color>> coloresTablero;
   late final List<Coordenada> casillasIniciales;
+  bool _dialogoFinMostrado = false;
 
   @override
   void initState() {
@@ -119,10 +120,150 @@ class _PantallaJuegoState extends State<PantallaJuego> {
     });
   }
 
+  Future<void> _mostrarDialogoFinSolitario(
+    BuildContext context,
+    JuegoEnProgreso state,
+  ) async {
+    final bloc = context.read<JuegoBloc>();
+    await showDialog<void>(
+      context: context,
+      barrierDismissible: true,
+      builder: (dialogContext) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(18),
+          ),
+          title: const Row(
+            children: [
+              Icon(Icons.emoji_events_rounded, color: Colors.amber, size: 28),
+              SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  '¡Partida terminada!',
+                  style: TextStyle(fontWeight: FontWeight.w800),
+                ),
+              ),
+            ],
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (state.motivoFin != null && state.motivoFin!.isNotEmpty)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 12),
+                  child: Text(
+                    state.motivoFin!,
+                    style: const TextStyle(fontSize: 13.5, color: Colors.black87),
+                  ),
+                ),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: Colors.amber.shade50,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: Colors.amber.shade200),
+                ),
+                child: Column(
+                  children: [
+                    Text(
+                      '${state.puntuacionTotal} pts',
+                      style: TextStyle(
+                        fontSize: 28,
+                        fontWeight: FontWeight.w900,
+                        color: Colors.amber.shade900,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'Regiones completadas: ${state.regionesCompletadasIds.length}/8 · Turnos: ${state.turno}',
+                      style: const TextStyle(
+                        fontSize: 12.5,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.black54,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(dialogContext).pop();
+                if (context.mounted) {
+                  Navigator.of(context).pop();
+                }
+              },
+              child: const Text('Elegir otro tablero'),
+            ),
+            ElevatedButton.icon(
+              onPressed: () {
+                Navigator.of(dialogContext).pop();
+                bloc.add(IniciarNivel(state.nivel));
+              },
+              icon: const Icon(Icons.replay_rounded, size: 18),
+              label: const Text('Volver a jugar'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Future<void> _confirmarFinalizarPartida(BuildContext context) async {
+    final confirmar = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(18),
+        ),
+        title: const Row(
+          children: [
+            Icon(Icons.exit_to_app_rounded, color: Colors.orange),
+            SizedBox(width: 8),
+            Expanded(child: Text('¿Finalizar partida?')),
+          ],
+        ),
+        content: const Text(
+          '¿Estás seguro de que quieres salir y finalizar esta partida?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text('Seguir jugando'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red.shade600,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Finalizar partida'),
+          ),
+        ],
+      ),
+    );
+    if (confirmar == true && context.mounted) {
+      Navigator.of(context).pop();
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return BlocConsumer<JuegoBloc, JuegoEstado>(
       listener: (context, state) {
+        if (state is JuegoEsperandoValoresIniciales) {
+          _dialogoFinMostrado = false;
+        }
+        if (state is JuegoEnProgreso &&
+            state.partidaTerminada &&
+            !_dialogoFinMostrado) {
+          _dialogoFinMostrado = true;
+          _mostrarDialogoFinSolitario(context, state);
+        }
         if (state is JuegoError) {
           showDialog(
             context: context,
@@ -175,19 +316,33 @@ class _PantallaJuegoState extends State<PantallaJuego> {
 
     final valoresActuales = estadoInicial?.valoresColocados ?? {};
     final bool listoParaAvanzar = estadoInicial?.listosParaAvanzar ?? false;
+    final bool requiereConfirmacionSalida = valoresActuales.isNotEmpty;
 
-    return Scaffold(
-      appBar: AppBar(
-        title: Text('Brilliant - ${nivelActivo.nombre}'),
-        centerTitle: true,
-        leading: Navigator.of(context).canPop()
-            ? IconButton(
-                key: const Key('boton_volver_seleccion'),
-                icon: const Icon(Icons.arrow_back),
-                tooltip: 'Elegir otro tablero',
-                onPressed: () => Navigator.of(context).pop(),
-              )
-            : null,
+    return PopScope(
+      canPop: !requiereConfirmacionSalida,
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop && requiereConfirmacionSalida) {
+          _confirmarFinalizarPartida(context);
+        }
+      },
+      child: Scaffold(
+        appBar: AppBar(
+          title: Text('Brilliant - ${nivelActivo.nombre}'),
+          centerTitle: true,
+          leading: Navigator.of(context).canPop()
+              ? IconButton(
+                  key: const Key('boton_volver_seleccion'),
+                  icon: const Icon(Icons.arrow_back),
+                  tooltip: 'Elegir otro tablero',
+                  onPressed: () {
+                    if (requiereConfirmacionSalida) {
+                      _confirmarFinalizarPartida(context);
+                    } else {
+                      Navigator.of(context).pop();
+                    }
+                  },
+                )
+              : null,
         actions: [
           IconButton(
             key: const Key('boton_como_jugar_fase1'),
@@ -298,8 +453,6 @@ class _PantallaJuegoState extends State<PantallaJuego> {
                                           ? EstadoCasilla.usado
                                           : EstadoCasilla.sinUsar,
                                       valor: valor,
-                                      reglaCorta: tableroRef.celdas[coord]?.region.tipo.reglaCorta,
-                                      tieneEstrella: esInicial,
                                     ),
                                     if (iconoEstrella != null) iconoEstrella,
                                   ],
@@ -404,34 +557,45 @@ class _PantallaJuegoState extends State<PantallaJuego> {
           },
         ),
       ),
+      ),
     );
   }
 
   // Fase 2: dados y anclas.
   Widget _construirPantallaFase2(BuildContext context, JuegoEnProgreso state) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text('Brilliant - ${nivelActivo.nombre}'),
-        centerTitle: true,
-        leading: Navigator.of(context).canPop()
-            ? IconButton(
-                key: const Key('boton_volver_seleccion'),
-                icon: const Icon(Icons.arrow_back),
-                tooltip: 'Elegir otro tablero',
-                onPressed: () => Navigator.of(context).pop(),
-              )
-            : null,
+    final bool enCurso = !state.partidaTerminada;
+
+    return PopScope(
+      canPop: !enCurso,
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop && enCurso) {
+          _confirmarFinalizarPartida(context);
+        }
+      },
+      child: Scaffold(
+        appBar: AppBar(
+          title: Text('Brilliant - ${nivelActivo.nombre}'),
+          centerTitle: true,
+          leading: Navigator.of(context).canPop()
+              ? IconButton(
+                  key: const Key('boton_volver_seleccion'),
+                  icon: const Icon(Icons.arrow_back),
+                  tooltip: 'Elegir otro tablero',
+                  onPressed: () {
+                    if (enCurso) {
+                      _confirmarFinalizarPartida(context);
+                    } else {
+                      Navigator.of(context).pop();
+                    }
+                  },
+                )
+              : null,
         actions: [
           IconButton(
             key: const Key('boton_como_jugar_fase2'),
             tooltip: '¿Cómo jugar?',
             icon: const Icon(Icons.help_outline_rounded),
             onPressed: () => DialogoComoJugar.mostrar(context),
-          ),
-          IconButton(
-            tooltip: 'Tirar dados de nuevo',
-            icon: const Icon(Icons.refresh_rounded),
-            onPressed: () => context.read<JuegoBloc>().add(TirarDados()),
           ),
         ],
       ),
@@ -498,7 +662,14 @@ class _PantallaJuegoState extends State<PantallaJuego> {
                               return GestureDetector(
                                 key: ValueKey('casilla_${fila}_$columna'),
                                 onTapDown: (details) {
-                                  if (esLugarValido) {
+                                  if (state.partidaTerminada) return;
+                                  if (state.debeTirarDados) {
+                                    _mostrarToast(
+                                      context,
+                                      details.globalPosition,
+                                      'Presiona "Tirar Dados Obligatorio" para avanzar de turno.',
+                                    );
+                                  } else if (esLugarValido) {
                                     context
                                         .read<JuegoBloc>()
                                         .add(ColocarNumero(coord));
@@ -544,7 +715,6 @@ class _PantallaJuegoState extends State<PantallaJuego> {
                                   esLugarValido: esLugarValido,
                                   valorPreview:
                                       esLugarValido ? state.numeroAColocar : null,
-                                  reglaCorta: celda?.region.tipo.reglaCorta,
                                   tieneEstrella: nivelActivo.casillasIniciales.contains(coord),
                                 ),
                               );
@@ -583,6 +753,7 @@ class _PantallaJuegoState extends State<PantallaJuego> {
             );
           },
         ),
+      ),
       ),
     );
   }

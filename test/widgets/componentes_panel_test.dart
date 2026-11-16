@@ -60,6 +60,7 @@ void main() {
         tablero: tablero,
         dado1: 1,
         dado2: 2,
+        debeTirarDados: true,
         hayJugadasDisponibles: true,
       );
 

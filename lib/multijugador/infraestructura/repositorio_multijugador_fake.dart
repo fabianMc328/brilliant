@@ -28,6 +28,7 @@ class RepositorioMultijugadorFake implements RepositorioMultijugador {
   bool concederFueLlamado = false;
   bool salirFueLlamado = false;
   bool reconectarManualFueLlamado = false;
+  bool tirarDadosFueLlamado = false;
   int? ultimaRondaPasada;
   (int, PosicionMapa, PosicionMapa, int)? ultimaJugadaEnviada;
   Map<PosicionMapa, int>? ultimasEstrellasConfirmadas;
@@ -200,6 +201,12 @@ class RepositorioMultijugadorFake implements RepositorioMultijugador {
   ) async {
     _lanzarSiHayFallo();
     ultimasEstrellasConfirmadas = Map<PosicionMapa, int>.from(valoresEstrellas);
+  }
+
+  @override
+  Future<void> tirarDados() async {
+    _lanzarSiHayFallo();
+    tirarDadosFueLlamado = true;
   }
 
   @override

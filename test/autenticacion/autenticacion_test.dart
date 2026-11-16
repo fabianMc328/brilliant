@@ -22,7 +22,7 @@ void main() {
       final repo = RepositorioAutenticacionLocal();
       final user = await repo.iniciarSesion(
         identificador: 'fabian@brilliant.com',
-        contrasena: 'password123',
+        contrasena: 'contraseña123',
       );
 
       expect(user.apodo, 'Fabian');
@@ -30,6 +30,64 @@ void main() {
 
       final sesion = await repo.obtenerUsuarioSesion();
       expect(sesion?.id, user.id);
+    });
+
+    test('Rechaza espacios en contraseña, correo inválido y apodos inválidos', () async {
+      final repo = RepositorioAutenticacionLocal();
+
+      // Contraseña con espacios en login
+      expect(
+        () => repo.iniciarSesion(
+          identificador: 'fabian@brilliant.com',
+          contrasena: 'contra seña123',
+        ),
+        throwsA(isA<FalloAutenticacion>()),
+      );
+
+      // Contraseña con espacios en registro
+      expect(
+        () => repo.registrarUsuario(
+          apodo: 'Luis',
+          email: 'luis@test.com',
+          contrasena: ' clave123',
+        ),
+        throwsA(isA<FalloAutenticacion>()),
+      );
+
+      // Correo con espacios en registro
+      expect(
+        () => repo.registrarUsuario(
+          apodo: 'Luis',
+          email: 'lu is@test.com',
+          contrasena: 'clave123',
+        ),
+        throwsA(isA<FalloAutenticacion>()),
+      );
+
+      // Apodo con solo espacios o símbolo @
+      expect(
+        () => repo.registrarUsuario(
+          apodo: '   ',
+          email: 'luis@test.com',
+          contrasena: 'clave123',
+        ),
+        throwsA(isA<FalloAutenticacion>()),
+      );
+      expect(
+        () => repo.registrarUsuario(
+          apodo: 'luis@pro',
+          email: 'luis@test.com',
+          contrasena: 'clave123',
+        ),
+        throwsA(isA<FalloAutenticacion>()),
+      );
+
+      // Identificador con espacios al inicio/fin pero válido sí hace trim
+      final user = await repo.iniciarSesion(
+        identificador: '  fabian@brilliant.com  ',
+        contrasena: 'contraseña123',
+      );
+      expect(user.apodo, 'Fabian');
     });
 
     test('Registra un nuevo usuario y persiste la sesión', () async {
@@ -110,7 +168,7 @@ void main() {
       final bloc = AuthBloc(repositorio: repo);
       bloc.add(const IniciarSesionSolicitado(
         identificador: 'fabian@brilliant.com',
-        contrasena: 'password123',
+        contrasena: 'contraseña123',
       ));
 
       await expectLater(
@@ -128,7 +186,7 @@ void main() {
       final bloc = AuthBloc(repositorio: repo);
       bloc.add(const IniciarSesionSolicitado(
         identificador: 'fabian@brilliant.com',
-        contrasena: 'password123',
+        contrasena: 'contraseña123',
       ));
 
       await expectLater(
@@ -158,7 +216,7 @@ void main() {
       SharedPreferences.setMockInitialValues({});
     });
 
-    testWidgets('Muestra pestañas de Iniciar Sesión y Registro', (tester) async {
+    testWidgets('Muestra pestañas de Iniciar Sesión y Registro y valida campos', (tester) async {
       final repo = RepositorioAutenticacionLocal();
       final bloc = AuthBloc(repositorio: repo);
       addTearDown(bloc.close);
@@ -178,6 +236,12 @@ void main() {
       expect(find.byKey(const Key('input_login_usuario')), findsOneWidget);
       expect(find.byKey(const Key('input_login_password')), findsOneWidget);
       expect(find.byKey(const Key('boton_iniciar_sesion')), findsOneWidget);
+      expect(find.text('💡 Cuenta demo: fabian@brilliant.com / contraseña123'), findsOneWidget);
+
+      // Validar rechazo visual de espacios en contraseña
+      await tester.enterText(find.byKey(const Key('input_login_password')), 'clave 123');
+      await tester.pumpAndSettle();
+      expect(find.text('La contraseña no puede contener espacios'), findsOneWidget);
     });
   });
 }

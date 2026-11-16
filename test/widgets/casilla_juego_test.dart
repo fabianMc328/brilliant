@@ -70,5 +70,26 @@ void main() {
 
       expect(find.byType(Container), findsWidgets);
     });
+
+    testWidgets('La casilla vacía se mantiene limpia sin texto de reglas', (tester) async {
+      await tester.pumpWidget(
+        const MaterialApp(
+          home: Scaffold(
+            body: Center(
+              child: SizedBox(
+                width: 56,
+                height: 56,
+                child: CasillaJuego(
+                  colorBase: Colors.orange,
+                  estado: EstadoCasilla.sinUsar,
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+
+      expect(find.byType(Text), findsNothing);
+    });
   });
 }

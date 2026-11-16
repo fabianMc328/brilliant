@@ -259,6 +259,15 @@ void main() {
       );
     });
 
+    test('Normaliza IP sin esquema ni puerto agregando ws:// y :8080', () {
+      final cliente = ClienteWebsocketMultijugador(urlInicial: '192.168.0.13');
+      addTearDown(cliente.cerrar);
+      expect(cliente.urlServidorActual, 'ws://192.168.0.13:8080');
+
+      cliente.configurarUrlServidor('ws://192.168.1.50');
+      expect(cliente.urlServidorActual, 'ws://192.168.1.50:8080');
+    });
+
     test('Falla limpiamente cuando servidorBrilliant está apagado o inalcanzable', () async {
       final clienteSinRed = ClienteWebsocketMultijugador(
         urlInicial: 'ws://127.0.0.1:1',

@@ -24,41 +24,103 @@ class PanelPuntuacion extends StatelessWidget {
   }
 
   Widget _construirChipProgreso(
-    Color color,
+    BuildContext context,
+    Tipo tipoInstancia,
     String label,
     Type tipo,
     Map<Type, int> completadasPorTipo,
     Map<Type, int> totalPorTipo,
   ) {
+    final color = tipoInstancia.color;
     final completadas = completadasPorTipo[tipo] ?? 0;
     final total = totalPorTipo[tipo] ?? 1;
     final bool completada = completadas == total;
 
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: completada ? 0.35 : 0.15),
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: color, width: completada ? 2.0 : 1.0),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(
-            width: 8,
-            height: 8,
-            decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+    return InkWell(
+      borderRadius: BorderRadius.circular(8),
+      onTap: () => showDialog<void>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(18),
           ),
-          const SizedBox(width: 4),
-          Text(
-            '$label: $completadas/$total',
-            style: TextStyle(
-              fontSize: 11,
-              fontWeight: FontWeight.bold,
-              color: Colors.blueGrey.shade900,
+          title: Row(
+            children: [
+              Container(
+                width: 14,
+                height: 14,
+                decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  'Región $label',
+                  style: const TextStyle(fontWeight: FontWeight.w800),
+                ),
+              ),
+            ],
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Regla: ${tipoInstancia.reglaCorta}',
+                style: const TextStyle(
+                  fontWeight: FontWeight.w800,
+                  fontSize: 14,
+                ),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                tipoInstancia.descripcion,
+                style: const TextStyle(fontSize: 13.5),
+              ),
+              const SizedBox(height: 10),
+              Text(
+                'Puntos al completar: ${tipoInstancia.puntuaciones[1] ?? 0} pts ($completadas/$total completadas)',
+                style: const TextStyle(
+                  fontSize: 12.5,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.black54,
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(),
+              child: const Text('Cerrar'),
             ),
-          ),
-        ],
+          ],
+        ),
+      ),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+        decoration: BoxDecoration(
+          color: color.withValues(alpha: completada ? 0.35 : 0.15),
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: color, width: completada ? 2.0 : 1.0),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 8,
+              height: 8,
+              decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+            ),
+            const SizedBox(width: 4),
+            Text(
+              '$label: $completadas/$total',
+              style: TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.bold,
+                color: Colors.blueGrey.shade900,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -190,7 +252,8 @@ class PanelPuntuacion extends StatelessWidget {
                   return Padding(
                     padding: const EdgeInsets.only(right: 6.0),
                     child: _construirChipProgreso(
-                      tipoInstancia.color,
+                      context,
+                      tipoInstancia,
                       _obtenerEtiquetaTipo(tipoInstancia),
                       tipoRuntime,
                       completadasPorTipo,

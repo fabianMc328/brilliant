@@ -37,6 +37,10 @@ class ConfirmarEstrellasMultijugador extends PartidaMultijugadorEvento {
 }
 
 // --- Fase 2: Rondas simultáneas de dados y anclas ---
+class SolicitarTirarDadosMultijugador extends PartidaMultijugadorEvento {
+  const SolicitarTirarDadosMultijugador();
+}
+
 class SeleccionarDadoMultijugador extends PartidaMultijugadorEvento {
   final int indiceDado; // 1 o 2
   final int valor;

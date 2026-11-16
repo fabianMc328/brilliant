@@ -14,6 +14,7 @@ class EstadoSalaMultijugador {
   final int rondaActual;
   final int? dado1;
   final int? dado2;
+  final bool esperandoTiroDados;
   final int segundosRestantes;
   final int metaPuntos;
   final Map<PosicionMapa, int> misValoresTablero;
@@ -32,6 +33,7 @@ class EstadoSalaMultijugador {
     this.rondaActual = 0,
     this.dado1,
     this.dado2,
+    this.esperandoTiroDados = false,
     this.segundosRestantes = 0,
     this.metaPuntos = ConstantesMultijugador.metaPuntos2Jugadores,
     this.misValoresTablero = const {},
@@ -50,6 +52,29 @@ class EstadoSalaMultijugador {
   }
 
   bool get soyAnfitrion => miResumen?.esAnfitrion ?? false;
+
+  bool get anfitrionReconectando => jugadores.any(
+        (j) =>
+            j.esAnfitrion &&
+            j.participacion == EstadoParticipacion.reconectando,
+      );
+
+  int? get segundosReconexionAnfitrion {
+    for (final j in jugadores) {
+      if (j.esAnfitrion &&
+          j.participacion == EstadoParticipacion.reconectando) {
+        return j.segundosReconexionRestantes;
+      }
+    }
+    return null;
+  }
+
+  String get nombreAnfitrion {
+    for (final j in jugadores) {
+      if (j.esAnfitrion) return j.apodo;
+    }
+    return 'el anfitrión';
+  }
 
   bool get estoyListo => miResumen?.estaListo ?? false;
 
@@ -93,6 +118,7 @@ class EstadoSalaMultijugador {
         'rondaActual': rondaActual,
         'dado1': dado1,
         'dado2': dado2,
+        'esperandoTiroDados': esperandoTiroDados,
         'segundosRestantes': segundosRestantes,
         'metaPuntos': metaPuntos,
         'misValoresTablero': {
@@ -140,6 +166,7 @@ class EstadoSalaMultijugador {
       rondaActual: (json['rondaActual'] as num?)?.toInt() ?? 0,
       dado1: (json['dado1'] as num?)?.toInt(),
       dado2: (json['dado2'] as num?)?.toInt(),
+      esperandoTiroDados: (json['esperandoTiroDados'] as bool?) ?? false,
       segundosRestantes: (json['segundosRestantes'] as num?)?.toInt() ?? 0,
       metaPuntos: (json['metaPuntos'] as num?)?.toInt() ??
           ConstantesMultijugador.metaPuntos2Jugadores,

@@ -17,9 +17,12 @@ class _PantallaLoginState extends State<PantallaLogin>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
 
+  final _formKeyLogin = GlobalKey<FormState>();
+  final _formKeyRegistro = GlobalKey<FormState>();
+
   // Controladores de Login
   final _ctrlLoginIdentificador = TextEditingController(text: 'fabian@brilliant.com');
-  final _ctrlLoginPassword = TextEditingController(text: 'password123');
+  final _ctrlLoginPassword = TextEditingController(text: 'contraseña123');
   bool _ocultarLoginPassword = true;
 
   // Controladores de Registro
@@ -28,6 +31,7 @@ class _PantallaLoginState extends State<PantallaLogin>
   final _ctrlRegPassword = TextEditingController();
   final _ctrlRegConfirmPassword = TextEditingController();
   bool _ocultarRegPassword = true;
+  bool _ocultarRegConfirmPassword = true;
 
   @override
   void initState() {
@@ -47,20 +51,102 @@ class _PantallaLoginState extends State<PantallaLogin>
     super.dispose();
   }
 
+  String? _validarIdentificadorLogin(String? value) {
+    final texto = value ?? '';
+    final limpio = texto.trim();
+    if (limpio.isEmpty) {
+      return 'Ingresa tu usuario o correo electrónico';
+    }
+    if (limpio.contains('@')) {
+      if (RegExp(r'\s').hasMatch(limpio)) {
+        return 'El correo electrónico no puede contener espacios';
+      }
+      if (!RegExp(r'^[^\s@]+@[^\s@]+\.[^\s@]{2,}$').hasMatch(limpio)) {
+        return 'Ingresa un correo electrónico válido';
+      }
+    } else if (RegExp(r'\s{2,}').hasMatch(limpio)) {
+      return 'El usuario no puede tener espacios consecutivos';
+    }
+    return null;
+  }
+
+  String? _validarContrasena(String? value) {
+    final texto = value ?? '';
+    if (texto.isEmpty) {
+      return 'Ingresa tu contraseña';
+    }
+    if (RegExp(r'\s').hasMatch(texto)) {
+      return 'La contraseña no puede contener espacios';
+    }
+    if (texto.length < 6) {
+      return 'La contraseña debe tener al menos 6 caracteres';
+    }
+    return null;
+  }
+
+  String? _validarApodo(String? value) {
+    final limpio = (value ?? '').trim();
+    if (limpio.isEmpty) {
+      return 'Ingresa un apodo o nombre de jugador';
+    }
+    if (limpio.length < 2 || limpio.length > 18) {
+      return 'Debe tener entre 2 y 18 caracteres';
+    }
+    if (RegExp(r'\s{2,}').hasMatch(limpio)) {
+      return 'No uses espacios consecutivos';
+    }
+    if (limpio.contains('@')) {
+      return 'El apodo no puede contener el símbolo @';
+    }
+    return null;
+  }
+
+  String? _validarEmailRegistro(String? value) {
+    final limpio = (value ?? '').trim();
+    if (limpio.isEmpty) {
+      return 'Ingresa tu correo electrónico';
+    }
+    if (RegExp(r'\s').hasMatch(limpio)) {
+      return 'El correo electrónico no puede contener espacios';
+    }
+    if (!RegExp(r'^[^\s@]+@[^\s@]+\.[^\s@]{2,}$').hasMatch(limpio)) {
+      return 'Ingresa un correo electrónico válido';
+    }
+    return null;
+  }
+
+  String? _validarConfirmacionContrasena(String? value) {
+    final texto = value ?? '';
+    if (texto.isEmpty) {
+      return 'Confirma tu contraseña';
+    }
+    if (RegExp(r'\s').hasMatch(texto)) {
+      return 'La contraseña no puede contener espacios';
+    }
+    if (texto != _ctrlRegPassword.text) {
+      return 'Las contraseñas no coinciden';
+    }
+    return null;
+  }
+
   void _enviarLogin() {
+    if (!(_formKeyLogin.currentState?.validate() ?? false)) return;
+    FocusScope.of(context).unfocus();
     context.read<AuthBloc>().add(
           IniciarSesionSolicitado(
-            identificador: _ctrlLoginIdentificador.text,
+            identificador: _ctrlLoginIdentificador.text.trim(),
             contrasena: _ctrlLoginPassword.text,
           ),
         );
   }
 
   void _enviarRegistro() {
+    if (!(_formKeyRegistro.currentState?.validate() ?? false)) return;
+    FocusScope.of(context).unfocus();
     context.read<AuthBloc>().add(
           RegistrarUsuarioSolicitado(
-            apodo: _ctrlRegApodo.text,
-            email: _ctrlRegEmail.text,
+            apodo: _ctrlRegApodo.text.trim(),
+            email: _ctrlRegEmail.text.trim(),
             contrasena: _ctrlRegPassword.text,
             confirmacionContrasena: _ctrlRegConfirmPassword.text,
           ),
@@ -186,16 +272,35 @@ class _PantallaLoginState extends State<PantallaLogin>
                               ),
                               const SizedBox(height: 20),
 
-                              // Formulario dinámico según tab
-                              SizedBox(
-                                height: 320,
-                                child: TabBarView(
-                                  controller: _tabController,
-                                  children: [
-                                    _construirFormularioLogin(estaCargando),
-                                    _construirFormularioRegistro(estaCargando),
-                                  ],
-                                ),
+                              // Formulario dinámico según tab (mantiene el estado de cada pestaña)
+                              AnimatedBuilder(
+                                animation: _tabController,
+                                builder: (context, _) {
+                                  final esLogin = _tabController.index == 0;
+                                  return AnimatedSize(
+                                    duration: const Duration(milliseconds: 200),
+                                    curve: Curves.easeOut,
+                                    child: Column(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Visibility(
+                                          visible: esLogin,
+                                          maintainState: true,
+                                          child: _construirFormularioLogin(
+                                            estaCargando,
+                                          ),
+                                        ),
+                                        Visibility(
+                                          visible: !esLogin,
+                                          maintainState: true,
+                                          child: _construirFormularioRegistro(
+                                            estaCargando,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  );
+                                },
                               ),
                             ],
                           ),
@@ -213,90 +318,108 @@ class _PantallaLoginState extends State<PantallaLogin>
   }
 
   Widget _construirFormularioLogin(bool cargando) {
-    return Column(
-      mainAxisAlignment: MainAxisAlignment.center,
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        TextField(
-          key: const Key('input_login_usuario'),
-          controller: _ctrlLoginIdentificador,
-          enabled: !cargando,
-          decoration: InputDecoration(
-            labelText: 'Usuario o Correo',
-            prefixIcon: const Icon(Icons.person_outline),
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
-            filled: true,
-            fillColor: Colors.grey.shade50,
-          ),
-        ),
-        const SizedBox(height: 14),
-        TextField(
-          key: const Key('input_login_password'),
-          controller: _ctrlLoginPassword,
-          enabled: !cargando,
-          obscureText: _ocultarLoginPassword,
-          decoration: InputDecoration(
-            labelText: 'Contraseña',
-            prefixIcon: const Icon(Icons.lock_outline),
-            suffixIcon: IconButton(
-              icon: Icon(
-                _ocultarLoginPassword
-                    ? Icons.visibility_off_outlined
-                    : Icons.visibility_outlined,
-              ),
-              onPressed: () {
-                setState(() => _ocultarLoginPassword = !_ocultarLoginPassword);
-              },
+    return Form(
+      key: _formKeyLogin,
+      autovalidateMode: AutovalidateMode.onUserInteraction,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          TextFormField(
+            key: const Key('input_login_usuario'),
+            controller: _ctrlLoginIdentificador,
+            enabled: !cargando,
+            textInputAction: TextInputAction.next,
+            autofillHints: const [AutofillHints.username, AutofillHints.email],
+            validator: _validarIdentificadorLogin,
+            decoration: InputDecoration(
+              labelText: 'Usuario o Correo',
+              prefixIcon: const Icon(Icons.person_outline),
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
+              filled: true,
+              fillColor: Colors.grey.shade50,
             ),
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
-            filled: true,
-            fillColor: Colors.grey.shade50,
           ),
-        ),
-        const SizedBox(height: 20),
-        ElevatedButton(
-          key: const Key('boton_iniciar_sesion'),
-          onPressed: cargando ? null : _enviarLogin,
-          style: ElevatedButton.styleFrom(
-            backgroundColor: const Color(0xFF2563EB),
-            foregroundColor: Colors.white,
-            padding: const EdgeInsets.symmetric(vertical: 14),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-            elevation: 2,
-          ),
-          child: cargando
-              ? const SizedBox(
-                  height: 20,
-                  width: 20,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2.5,
-                    color: Colors.white,
-                  ),
-                )
-              : const Text(
-                  'Entrar a Jugar',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+          const SizedBox(height: 14),
+          TextFormField(
+            key: const Key('input_login_password'),
+            controller: _ctrlLoginPassword,
+            enabled: !cargando,
+            obscureText: _ocultarLoginPassword,
+            textInputAction: TextInputAction.done,
+            autofillHints: const [AutofillHints.password],
+            onFieldSubmitted: (_) {
+              if (!cargando) _enviarLogin();
+            },
+            validator: _validarContrasena,
+            decoration: InputDecoration(
+              labelText: 'Contraseña',
+              prefixIcon: const Icon(Icons.lock_outline),
+              suffixIcon: IconButton(
+                icon: Icon(
+                  _ocultarLoginPassword
+                      ? Icons.visibility_off_outlined
+                      : Icons.visibility_outlined,
                 ),
-        ),
-        const SizedBox(height: 10),
-        Text(
-          '💡 Cuenta demo: fabian@brilliant.com / password123',
-          textAlign: TextAlign.center,
-          style: TextStyle(fontSize: 11, color: Colors.blueGrey.shade500),
-        ),
-      ],
+                onPressed: () {
+                  setState(() => _ocultarLoginPassword = !_ocultarLoginPassword);
+                },
+              ),
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
+              filled: true,
+              fillColor: Colors.grey.shade50,
+            ),
+          ),
+          const SizedBox(height: 20),
+          ElevatedButton(
+            key: const Key('boton_iniciar_sesion'),
+            onPressed: cargando ? null : _enviarLogin,
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF2563EB),
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(vertical: 14),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+              elevation: 2,
+            ),
+            child: cargando
+                ? const SizedBox(
+                    height: 20,
+                    width: 20,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2.5,
+                      color: Colors.white,
+                    ),
+                  )
+                : const Text(
+                    'Entrar a Jugar',
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                  ),
+          ),
+          const SizedBox(height: 10),
+          Text(
+            '💡 Cuenta demo: fabian@brilliant.com / contraseña123',
+            textAlign: TextAlign.center,
+            style: TextStyle(fontSize: 11, color: Colors.blueGrey.shade500),
+          ),
+        ],
+      ),
     );
   }
 
   Widget _construirFormularioRegistro(bool cargando) {
-    return SingleChildScrollView(
+    return Form(
+      key: _formKeyRegistro,
+      autovalidateMode: AutovalidateMode.onUserInteraction,
       child: Column(
+        mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          TextField(
+          TextFormField(
             key: const Key('input_registro_apodo'),
             controller: _ctrlRegApodo,
             enabled: !cargando,
+            textInputAction: TextInputAction.next,
+            validator: _validarApodo,
             decoration: InputDecoration(
               labelText: 'Apodo / Nombre de Jugador',
               prefixIcon: const Icon(Icons.badge_outlined),
@@ -307,11 +430,14 @@ class _PantallaLoginState extends State<PantallaLogin>
             ),
           ),
           const SizedBox(height: 10),
-          TextField(
+          TextFormField(
             key: const Key('input_registro_email'),
             controller: _ctrlRegEmail,
             enabled: !cargando,
             keyboardType: TextInputType.emailAddress,
+            textInputAction: TextInputAction.next,
+            autofillHints: const [AutofillHints.email],
+            validator: _validarEmailRegistro,
             decoration: InputDecoration(
               labelText: 'Correo Electrónico',
               prefixIcon: const Icon(Icons.email_outlined),
@@ -322,11 +448,13 @@ class _PantallaLoginState extends State<PantallaLogin>
             ),
           ),
           const SizedBox(height: 10),
-          TextField(
+          TextFormField(
             key: const Key('input_registro_password'),
             controller: _ctrlRegPassword,
             enabled: !cargando,
             obscureText: _ocultarRegPassword,
+            textInputAction: TextInputAction.next,
+            validator: _validarContrasena,
             decoration: InputDecoration(
               labelText: 'Contraseña (mín. 6 caracteres)',
               prefixIcon: const Icon(Icons.lock_outline),
@@ -348,14 +476,31 @@ class _PantallaLoginState extends State<PantallaLogin>
             ),
           ),
           const SizedBox(height: 10),
-          TextField(
+          TextFormField(
             key: const Key('input_registro_confirm_password'),
             controller: _ctrlRegConfirmPassword,
             enabled: !cargando,
-            obscureText: _ocultarRegPassword,
+            obscureText: _ocultarRegConfirmPassword,
+            textInputAction: TextInputAction.done,
+            onFieldSubmitted: (_) {
+              if (!cargando) _enviarRegistro();
+            },
+            validator: _validarConfirmacionContrasena,
             decoration: InputDecoration(
               labelText: 'Confirmar Contraseña',
               prefixIcon: const Icon(Icons.lock_reset),
+              suffixIcon: IconButton(
+                icon: Icon(
+                  _ocultarRegConfirmPassword
+                      ? Icons.visibility_off_outlined
+                      : Icons.visibility_outlined,
+                  size: 20,
+                ),
+                onPressed: () {
+                  setState(() =>
+                      _ocultarRegConfirmPassword = !_ocultarRegConfirmPassword);
+                },
+              ),
               border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
               filled: true,
               fillColor: Colors.grey.shade50,

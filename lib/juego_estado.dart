@@ -52,6 +52,8 @@ class JuegoEnProgreso extends JuegoEstado {
   final int turno;
   final String? mensajeFeedback;
   final bool hayJugadasDisponibles;
+  final bool partidaTerminada;
+  final String? motivoFin;
 
   JuegoEnProgreso({
     required this.tablero,
@@ -69,6 +71,8 @@ class JuegoEnProgreso extends JuegoEstado {
     this.turno = 1,
     this.mensajeFeedback,
     this.hayJugadasDisponibles = true,
+    this.partidaTerminada = false,
+    this.motivoFin,
   }) : nivel = nivel ?? CatalogoNiveles.nivel1;
 
   // Regresa los números que ya están puestos en el tablero.
@@ -114,6 +118,8 @@ class JuegoEnProgreso extends JuegoEstado {
     String? mensajeFeedback,
     bool limpiarFeedback = false,
     bool? hayJugadasDisponibles,
+    bool? partidaTerminada,
+    String? motivoFin,
   }) {
     return JuegoEnProgreso(
       tablero: tablero ?? this.tablero,
@@ -139,6 +145,8 @@ class JuegoEnProgreso extends JuegoEstado {
           limpiarFeedback ? null : (mensajeFeedback ?? this.mensajeFeedback),
       hayJugadasDisponibles:
           hayJugadasDisponibles ?? this.hayJugadasDisponibles,
+      partidaTerminada: partidaTerminada ?? this.partidaTerminada,
+      motivoFin: motivoFin ?? this.motivoFin,
     );
   }
 }

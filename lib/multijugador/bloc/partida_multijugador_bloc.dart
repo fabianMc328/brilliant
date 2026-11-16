@@ -29,6 +29,7 @@ class PartidaMultijugadorBloc
   PartidaMultijugadorBloc({
     required RepositorioMultijugador repositorio,
     required EstadoSalaMultijugador salaInicial,
+    List<MensajeChat> historialChatInicial = const [],
     Random? random,
   })  : _repositorio = repositorio,
         _random = random ?? Random(),
@@ -36,12 +37,14 @@ class PartidaMultijugadorBloc
           _construirEstadoDesdeSala(
             sala: salaInicial,
             conexion: repositorio.estadoConexionActual,
+            historialPrevio: historialChatInicial,
           ),
         ) {
     on<ColocarEstrellaLocal>(_onColocarEstrellaLocal);
     on<LimpiarEstrellasLocales>(_onLimpiarEstrellasLocales);
     on<LlenarEstrellasAleatoriasLocales>(_onLlenarAleatorias);
     on<ConfirmarEstrellasMultijugador>(_onConfirmarEstrellas);
+    on<SolicitarTirarDadosMultijugador>(_onTirarDados);
     on<SeleccionarDadoMultijugador>(_onSeleccionarDado);
     on<SeleccionarAnclaMultijugador>(_onSeleccionarAncla);
     on<DeseleccionarAnclaMultijugador>(_onDeseleccionarAncla);
@@ -162,6 +165,26 @@ class PartidaMultijugadorBloc
 
     try {
       await _repositorio.confirmarValoresIniciales(mapaRed);
+    } on FalloMultijugador catch (f) {
+      emit(actual.copiarCon(mensajeAviso: f.mensaje));
+    }
+  }
+
+  Future<void> _onTirarDados(
+    SolicitarTirarDadosMultijugador event,
+    Emitter<PartidaMultijugadorEstado> emit,
+  ) async {
+    if (state is! PartidaMultijugadorActiva) return;
+    final actual = state as PartidaMultijugadorActiva;
+    if (actual.sala.fase != FaseSala.jugandoRondas ||
+        !actual.sala.esperandoTiroDados ||
+        !actual.sala.soyAnfitrion ||
+        actual.conexion.tipo != TipoEstadoConexionCliente.conectado) {
+      return;
+    }
+
+    try {
+      await _repositorio.tirarDados();
     } on FalloMultijugador catch (f) {
       emit(actual.copiarCon(mensajeAviso: f.mensaje));
     }
@@ -449,6 +472,7 @@ class PartidaMultijugadorBloc
     final nuevaRondaOFase = previo == null ||
         previo.sala.fase != event.sala.fase ||
         previo.sala.rondaActual != event.sala.rondaActual ||
+        previo.sala.esperandoTiroDados != event.sala.esperandoTiroDados ||
         event.sala.yaConfirmeEnRonda ||
         event.sala.yaConcedi;
 
@@ -459,16 +483,28 @@ class PartidaMultijugadorBloc
       historialPrevio: previo?.historialChat,
     );
 
+    final avisoPreservado = (!nuevaRondaOFase && previo.mensajeAviso != null)
+        ? previo.mensajeAviso
+        : null;
+
     // Preservar selección activa de ancla o dado durante ticks del reloj en la misma ronda
-    if (!nuevaRondaOFase && (previo.anclaSeleccionada != null || previo.indiceDadoSeleccionado != null)) {
+    if (!nuevaRondaOFase &&
+        (previo.anclaSeleccionada != null ||
+            previo.indiceDadoSeleccionado != null)) {
       emit(
         base.copiarCon(
           anclaSeleccionada: previo.anclaSeleccionada,
           indiceDadoSeleccionado: previo.indiceDadoSeleccionado,
           numeroAColocar: previo.numeroAColocar,
           casillasValidas: previo.casillasValidas,
+          mensajeAviso: avisoPreservado,
         ),
       );
+      return;
+    }
+
+    if (avisoPreservado != null) {
+      emit(base.copiarCon(mensajeAviso: avisoPreservado));
       return;
     }
 

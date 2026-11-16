@@ -57,6 +57,9 @@ abstract class RepositorioMultijugador {
   /// Confirma las 6 estrellas iniciales colocadas por el jugador en la Fase 1.
   Future<void> confirmarValoresIniciales(Map<PosicionMapa, int> valoresEstrellas);
 
+  /// Solicita tirar los dados de la ronda actual (exclusivo del anfitrión).
+  Future<void> tirarDados();
+
   /// Envía la colocación de un número en la ronda actual de dados.
   Future<void> colocarNumeroEnRonda({
     required int ronda,

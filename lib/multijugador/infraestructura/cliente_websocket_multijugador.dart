@@ -17,6 +17,7 @@ class ClienteWebsocketMultijugador implements RepositorioMultijugador {
   final FabricaCanalWebSocket _fabricaCanal;
   final Duration _timeoutOperacion;
   final Duration _intervaloPing;
+  final Duration? _timeoutSinPong;
   final List<Duration> _tiemposEsperaReconexion;
 
   String _urlServidor;
@@ -24,6 +25,7 @@ class ClienteWebsocketMultijugador implements RepositorioMultijugador {
   StreamSubscription<dynamic>? _suscripcionCanal;
   Timer? _timerPing;
   Timer? _timerReconexion;
+  DateTime _ultimaActividadServidor = DateTime.now();
 
   CredencialSesionSala? _credencialActiva;
   EstadoSalaMultijugador? _ultimoEstadoSala;
@@ -50,11 +52,13 @@ class ClienteWebsocketMultijugador implements RepositorioMultijugador {
     FabricaCanalWebSocket? fabricaCanal,
     Duration timeoutOperacion = ConstantesMultijugador.timeoutConexionInicial,
     Duration intervaloPing = ConstantesMultijugador.intervaloHeartbeat,
+    Duration? timeoutSinPong,
     List<Duration>? tiemposEsperaReconexion,
   })  : _urlServidor = _normalizarUrl(urlInicial),
         _fabricaCanal = fabricaCanal ?? WebSocketChannel.connect,
         _timeoutOperacion = timeoutOperacion,
         _intervaloPing = intervaloPing,
+        _timeoutSinPong = timeoutSinPong,
         _tiemposEsperaReconexion = tiemposEsperaReconexion ??
             const [
               Duration(seconds: 1),
@@ -193,6 +197,13 @@ class ClienteWebsocketMultijugador implements RepositorioMultijugador {
   }
 
   @override
+  Future<void> tirarDados() async {
+    _enviarComandoSimple(
+      const ComandoCliente(tipo: TipoComandoCliente.tirarDados),
+    );
+  }
+
+  @override
   Future<void> colocarNumeroEnRonda({
     required int ronda,
     required PosicionMapa ancla,
@@ -313,16 +324,21 @@ class ClienteWebsocketMultijugador implements RepositorioMultijugador {
       _actualizarEstadoConexion(
         const EstadoConexionCliente.desconectado('Servidor no disponible'),
       );
+      final esLocalhost = _urlServidor.contains('localhost') ||
+          _urlServidor.contains('127.0.0.1');
+      final consejo = esLocalhost
+          ? ' Verifica que servidorBrilliant esté encendido en esta PC o que ambos estén en la misma red Wi-Fi (puerto 8080).'
+          : ' Verifica que servidorBrilliant esté encendido, que ambos estén en la misma red y que el firewall permita el puerto 8080.';
       throw FalloMultijugador(
         codigo: CodigoFalloMultijugador.sinConexionServidor,
-        mensaje:
-            'No se pudo conectar al servidor ($_urlServidor). Verifica que esté encendido y en la misma red.',
+        mensaje: 'No se pudo conectar al servidor ($_urlServidor).$consejo',
       );
     }
 
     final canal = canalTentativo;
 
     _canal = canal;
+    _ultimaActividadServidor = DateTime.now();
     _actualizarEstadoConexion(const EstadoConexionCliente.conectado());
 
     _suscripcionCanal = canal.stream.listen(
@@ -332,8 +348,18 @@ class ClienteWebsocketMultijugador implements RepositorioMultijugador {
       cancelOnError: true,
     );
 
+    final limiteSilencio = _timeoutSinPong ??
+        (_intervaloPing * 3 > const Duration(seconds: 12)
+            ? _intervaloPing * 3
+            : const Duration(seconds: 12));
+
     _timerPing = Timer.periodic(_intervaloPing, (_) {
       if (_estadoConexion.tipo == TipoEstadoConexionCliente.conectado) {
+        if (DateTime.now().difference(_ultimaActividadServidor) >
+            limiteSilencio) {
+          _manejarCaidaInesperada();
+          return;
+        }
         try {
           _canal?.sink.add(
             jsonEncode(
@@ -357,6 +383,7 @@ class ClienteWebsocketMultijugador implements RepositorioMultijugador {
       return;
     }
 
+    _ultimaActividadServidor = DateTime.now();
     if (evento.tipo == TipoEventoServidor.pong) return;
 
     if (evento.credencial != null) {
@@ -598,15 +625,29 @@ class ClienteWebsocketMultijugador implements RepositorioMultijugador {
 
   static String _normalizarUrl(String entrada) {
     final limpia = entrada.trim();
+    if (limpia.isEmpty) return limpia;
+
+    String resultado;
     if (limpia.startsWith('ws://') || limpia.startsWith('wss://')) {
-      return limpia;
+      resultado = limpia;
+    } else if (limpia.startsWith('http://')) {
+      resultado = 'ws://${limpia.substring(7)}';
+    } else if (limpia.startsWith('https://')) {
+      resultado = 'wss://${limpia.substring(8)}';
+    } else {
+      resultado = 'ws://$limpia';
     }
-    if (limpia.startsWith('http://')) {
-      return 'ws://${limpia.substring(7)}';
+
+    final uri = Uri.tryParse(resultado);
+    if (uri != null &&
+        uri.scheme == 'ws' &&
+        uri.host.isNotEmpty &&
+        !uri.hasPort &&
+        (uri.path.isEmpty || uri.path == '/')) {
+      return uri
+          .replace(port: ConstantesMultijugador.puertoServidorPorDefecto)
+          .toString();
     }
-    if (limpia.startsWith('https://')) {
-      return 'wss://${limpia.substring(8)}';
-    }
-    return 'ws://$limpia';
+    return resultado;
   }
 }

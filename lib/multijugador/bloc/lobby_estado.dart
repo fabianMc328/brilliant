@@ -74,10 +74,12 @@ class LobbyEnSalaEspera extends LobbyEstado {
 class LobbyTransicionAPartida extends LobbyEstado {
   final EstadoSalaMultijugador salaInicial;
   final EstadoConexionCliente conexion;
+  final List<MensajeChat> historialChat;
 
   const LobbyTransicionAPartida({
     required super.urlServidor,
     required this.salaInicial,
     required this.conexion,
+    this.historialChat = const [],
   });
 }

@@ -62,7 +62,9 @@ class PanelDados extends StatelessWidget {
                       seleccionado: state.indiceDadoSeleccionado == 1,
                       esNumeroAColocar: dado1EsNumeroAColocar,
                       tamano: 48,
-                      onTap: onSeleccionarDado != null
+                      onTap: (onSeleccionarDado != null &&
+                              !state.debeTirarDados &&
+                              !state.partidaTerminada)
                           ? () => onSeleccionarDado!(1, state.dado1)
                           : null,
                     ),
@@ -89,7 +91,9 @@ class PanelDados extends StatelessWidget {
                       seleccionado: state.indiceDadoSeleccionado == 2,
                       esNumeroAColocar: dado2EsNumeroAColocar,
                       tamano: 48,
-                      onTap: onSeleccionarDado != null
+                      onTap: (onSeleccionarDado != null &&
+                              !state.debeTirarDados &&
+                              !state.partidaTerminada)
                           ? () => onSeleccionarDado!(2, state.dado2)
                           : null,
                     ),
@@ -133,7 +137,23 @@ class PanelDados extends StatelessWidget {
                       ),
                       const SizedBox(width: 4),
                     ],
-                    if (state.debeTirarDados)
+                    if (state.partidaTerminada)
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 14, vertical: 10),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFD1FAE5),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Text(
+                          'Final: ${state.puntuacionTotal} pts',
+                          style: const TextStyle(
+                            fontWeight: FontWeight.w900,
+                            color: Color(0xFF065F46),
+                          ),
+                        ),
+                      )
+                    else if (state.debeTirarDados)
                       ElevatedButton.icon(
                         key: const Key('boton_tirar_dados'),
                         onPressed: onTirarDados,
@@ -152,32 +172,16 @@ class PanelDados extends StatelessWidget {
                           ),
                         ),
                       )
-                    else if (!state.hayJugadasDisponibles)
+                    else
                       ElevatedButton.icon(
                         key: const Key('boton_pasar_turno'),
                         onPressed: onPasarTurno,
                         icon: const Icon(Icons.skip_next, size: 18),
                         label: const Text('Pasar Turno'),
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.orange.shade700,
-                          foregroundColor: Colors.white,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 14,
-                            vertical: 10,
-                          ),
-                        ),
-                      )
-                    else
-                      ElevatedButton.icon(
-                        key: const Key('boton_tirar_dados'),
-                        onPressed: onTirarDados,
-                        icon: const Icon(Icons.casino, size: 18),
-                        label: const Text('Tirar Dados'),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.blue.shade700,
+                          backgroundColor: state.hayJugadasDisponibles
+                              ? Colors.blueGrey.shade700
+                              : Colors.orange.shade700,
                           foregroundColor: Colors.white,
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(12),

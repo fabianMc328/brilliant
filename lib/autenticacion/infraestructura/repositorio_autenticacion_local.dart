@@ -32,7 +32,7 @@ class RepositorioAutenticacionLocal implements RepositorioAutenticacion {
     final jsonStr = prefs.getString(_claveUsuarios);
     if (jsonStr == null || jsonStr.isEmpty) {
       // Sembrar usuario demo por defecto para pruebas o acceso rápido
-      final demoHash = _hashear('password123');
+      final demoHash = _hashear('contraseña123');
       final baseInicial = <String, Map<String, dynamic>>{
         'usr_fabian': {
           'usuario': Usuario(
@@ -50,9 +50,19 @@ class RepositorioAutenticacionLocal implements RepositorioAutenticacion {
 
     try {
       final decoded = jsonDecode(jsonStr) as Map<String, dynamic>;
-      return decoded.map(
+      final bd = decoded.map(
         (key, value) => MapEntry(key, value as Map<String, dynamic>),
       );
+
+      // Migrar contraseña demo anterior si estaba persistida en el dispositivo
+      final demoUser = bd['usr_fabian'];
+      if (demoUser != null &&
+          demoUser['passwordHash'] == _hashear('password123')) {
+        demoUser['passwordHash'] = _hashear('contraseña123');
+        await prefs.setString(_claveUsuarios, jsonEncode(bd));
+      }
+
+      return bd;
     } catch (_) {
       return {};
     }
@@ -87,19 +97,54 @@ class RepositorioAutenticacionLocal implements RepositorioAutenticacion {
     required String contrasena,
   }) async {
     final idLimpio = identificador.trim().toLowerCase();
-    final passLimpia = contrasena.trim();
 
-    if (idLimpio.isEmpty || passLimpia.isEmpty) {
-      throw const FalloAutenticacion('Ingresa tu usuario/correo y contraseña.');
+    if (idLimpio.isEmpty) {
+      throw const FalloAutenticacion(
+        'Ingresa tu usuario o correo electrónico.',
+      );
+    }
+
+    if (idLimpio.contains('@')) {
+      if (RegExp(r'\s').hasMatch(idLimpio)) {
+        throw const FalloAutenticacion(
+          'El correo electrónico no puede contener espacios.',
+        );
+      }
+      final regexEmail = RegExp(r'^[^\s@]+@[^\s@]+\.[^\s@]{2,}$');
+      if (!regexEmail.hasMatch(idLimpio)) {
+        throw const FalloAutenticacion(
+          'Ingresa un correo electrónico válido.',
+        );
+      }
+    } else if (RegExp(r'\s{2,}').hasMatch(idLimpio)) {
+      throw const FalloAutenticacion(
+        'El usuario no puede contener espacios consecutivos.',
+      );
+    }
+
+    if (contrasena.isEmpty) {
+      throw const FalloAutenticacion('Ingresa tu contraseña.');
+    }
+
+    if (RegExp(r'\s').hasMatch(contrasena)) {
+      throw const FalloAutenticacion(
+        'La contraseña no puede contener espacios.',
+      );
+    }
+
+    if (contrasena.length < 6) {
+      throw const FalloAutenticacion(
+        'La contraseña debe tener al menos 6 caracteres.',
+      );
     }
 
     final bd = await _cargarBaseDatosUsuarios();
-    final hashIngresado = _hashear(passLimpia);
+    final hashIngresado = _hashear(contrasena);
 
     for (final entry in bd.values) {
       final rawUser = entry['usuario'] as Map<String, dynamic>;
-      final email = (rawUser['email'] as String? ?? '').toLowerCase();
-      final apodo = (rawUser['apodo'] as String? ?? '').toLowerCase();
+      final email = (rawUser['email'] as String? ?? '').trim().toLowerCase();
+      final apodo = (rawUser['apodo'] as String? ?? '').trim().toLowerCase();
       final storedHash = entry['passwordHash'] as String? ?? '';
 
       if (idLimpio == email || idLimpio == apodo) {
@@ -126,7 +171,10 @@ class RepositorioAutenticacionLocal implements RepositorioAutenticacion {
   }) async {
     final apodoLimpio = apodo.trim();
     final emailLimpio = email.trim().toLowerCase();
-    final passLimpia = contrasena.trim();
+
+    if (apodoLimpio.isEmpty) {
+      throw const FalloAutenticacion('Ingresa un apodo o nombre de jugador.');
+    }
 
     if (apodoLimpio.length < 2 || apodoLimpio.length > 18) {
       throw const FalloAutenticacion(
@@ -134,12 +182,44 @@ class RepositorioAutenticacionLocal implements RepositorioAutenticacion {
       );
     }
 
-    final regexEmail = RegExp(r'^[^@]+@[^@]+\.[^@]+$');
+    if (RegExp(r'\s{2,}').hasMatch(apodoLimpio)) {
+      throw const FalloAutenticacion(
+        'El apodo no puede contener espacios consecutivos.',
+      );
+    }
+
+    if (apodoLimpio.contains('@')) {
+      throw const FalloAutenticacion(
+        'El apodo no puede contener el símbolo @.',
+      );
+    }
+
+    if (emailLimpio.isEmpty) {
+      throw const FalloAutenticacion('Ingresa un correo electrónico.');
+    }
+
+    if (RegExp(r'\s').hasMatch(emailLimpio)) {
+      throw const FalloAutenticacion(
+        'El correo electrónico no puede contener espacios.',
+      );
+    }
+
+    final regexEmail = RegExp(r'^[^\s@]+@[^\s@]+\.[^\s@]{2,}$');
     if (!regexEmail.hasMatch(emailLimpio)) {
       throw const FalloAutenticacion('Ingresa un correo electrónico válido.');
     }
 
-    if (passLimpia.length < 6) {
+    if (contrasena.isEmpty) {
+      throw const FalloAutenticacion('Ingresa una contraseña.');
+    }
+
+    if (RegExp(r'\s').hasMatch(contrasena)) {
+      throw const FalloAutenticacion(
+        'La contraseña no puede contener espacios.',
+      );
+    }
+
+    if (contrasena.length < 6) {
       throw const FalloAutenticacion(
         'La contraseña debe tener al menos 6 caracteres.',
       );
@@ -149,12 +229,13 @@ class RepositorioAutenticacionLocal implements RepositorioAutenticacion {
 
     for (final entry in bd.values) {
       final rawUser = entry['usuario'] as Map<String, dynamic>;
-      if ((rawUser['email'] as String? ?? '').toLowerCase() == emailLimpio) {
+      if ((rawUser['email'] as String? ?? '').trim().toLowerCase() ==
+          emailLimpio) {
         throw const FalloAutenticacion(
           'El correo electrónico ya está registrado.',
         );
       }
-      if ((rawUser['apodo'] as String? ?? '').toLowerCase() ==
+      if ((rawUser['apodo'] as String? ?? '').trim().toLowerCase() ==
           apodoLimpio.toLowerCase()) {
         throw FalloAutenticacion(
           'El apodo "$apodoLimpio" ya está en uso.',
@@ -172,7 +253,7 @@ class RepositorioAutenticacionLocal implements RepositorioAutenticacion {
 
     bd[nuevoId] = {
       'usuario': nuevoUsuario.toJson(),
-      'passwordHash': _hashear(passLimpia),
+      'passwordHash': _hashear(contrasena),
     };
 
     await _guardarBaseDatosUsuarios(bd);

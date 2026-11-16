@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
@@ -9,6 +11,7 @@ import '../../widgets/selector_valor_inicial_sheet.dart';
 import '../bloc/partida_multijugador_bloc.dart';
 import '../bloc/partida_multijugador_estado.dart';
 import '../bloc/partida_multijugador_evento.dart';
+import '../dominio/estado_sala_multijugador.dart';
 import '../dominio/estados_jugador_sala.dart';
 import '../widgets/banner_conexion_red.dart';
 import '../widgets/barra_marcador_jugadores.dart';
@@ -33,10 +36,94 @@ class PantallaPartidaMultijugador extends StatefulWidget {
 
 class _PantallaPartidaMultijugadorState
     extends State<PantallaPartidaMultijugador> {
+  Map<String, List<String>> _completadosPreviosPorRegion = {};
+  String? _avisoCentralTexto;
+  Color? _avisoCentralColor;
+  bool _mostrarAvisoCentral = false;
+  Timer? _timerAvisoCentral;
+
+  @override
+  void initState() {
+    super.initState();
+    final estadoInicial = context.read<PartidaMultijugadorBloc>().state;
+    if (estadoInicial is PartidaMultijugadorActiva) {
+      _completadosPreviosPorRegion = _copiarMapaCompletados(estadoInicial.sala);
+    }
+  }
+
   @override
   void dispose() {
+    _timerAvisoCentral?.cancel();
     widget.alCerrarRepositorio?.call();
     super.dispose();
+  }
+
+  Map<String, List<String>> _copiarMapaCompletados(
+    EstadoSalaMultijugador sala,
+  ) {
+    return {
+      for (final e in sala.carreraPorRegion.entries)
+        e.key: List<String>.from(e.value.idsJugadoresCompletaron),
+    };
+  }
+
+  String _nombreJugadorPorId(EstadoSalaMultijugador sala, String jugadorId) {
+    for (final j in sala.jugadores) {
+      if (j.id == jugadorId) {
+        return j.id == sala.miJugadorId ? '${j.apodo} (Tú)' : j.apodo;
+      }
+    }
+    return jugadorId;
+  }
+
+  void _evaluarRegionesCompletadas(PartidaMultijugadorActiva state) {
+    final sala = state.sala;
+    final eventosTexto = <String>[];
+    Color? colorDestacado;
+
+    for (final entry in sala.carreraPorRegion.entries) {
+      final regionId = entry.key;
+      final nuevosIds = entry.value.idsJugadoresCompletaron;
+      final previosIds = _completadosPreviosPorRegion[regionId] ?? const [];
+
+      if (nuevosIds.length > previosIds.length) {
+        final recienCompletaron = nuevosIds.sublist(previosIds.length);
+        final nombres = recienCompletaron
+            .map((id) => _nombreJugadorPorId(sala, id))
+            .join(' y ');
+        final nombreRegion = regionId.replaceAll('_', ' ');
+        eventosTexto.add('¡$nombres completó $nombreRegion!');
+
+        for (final r in state.tableroLocal.regiones) {
+          if (r.id == regionId) {
+            colorDestacado ??= r.tipo.color;
+            break;
+          }
+        }
+      }
+    }
+
+    _completadosPreviosPorRegion = _copiarMapaCompletados(sala);
+
+    if (eventosTexto.isNotEmpty) {
+      _mostrarBannerCentral(
+        eventosTexto.join('\n'),
+        colorDestacado ?? Colors.amber,
+      );
+    }
+  }
+
+  void _mostrarBannerCentral(String texto, Color color) {
+    _timerAvisoCentral?.cancel();
+    setState(() {
+      _avisoCentralTexto = texto;
+      _avisoCentralColor = color;
+      _mostrarAvisoCentral = true;
+    });
+    _timerAvisoCentral = Timer(const Duration(seconds: 3), () {
+      if (!mounted) return;
+      setState(() => _mostrarAvisoCentral = false);
+    });
   }
 
   Future<void> _intentarConceder(BuildContext context) async {
@@ -76,12 +163,54 @@ class _PantallaPartidaMultijugadorState
     );
   }
 
+  void _mostrarToast(BuildContext context, String mensaje) {
+    final overlay = Overlay.maybeOf(context);
+    if (overlay == null) return;
+    final entry = OverlayEntry(
+      builder: (_) => Positioned(
+        bottom: 92,
+        left: 24,
+        right: 24,
+        child: IgnorePointer(
+          child: Center(
+            child: Material(
+              color: Colors.transparent,
+              child: Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF0F172A).withValues(alpha: 0.9),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(
+                  mensaje,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 12.5,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+    overlay.insert(entry);
+    Future.delayed(const Duration(milliseconds: 1400), () {
+      if (entry.mounted) entry.remove();
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     return BlocConsumer<PartidaMultijugadorBloc, PartidaMultijugadorEstado>(
       listener: (context, state) {
         if (state is PartidaMultijugadorCerrada) {
           Navigator.of(context).maybePop();
+        } else if (state is PartidaMultijugadorActiva) {
+          _evaluarRegionesCompletadas(state);
         }
       },
       builder: (context, state) {
@@ -95,7 +224,24 @@ class _PantallaPartidaMultijugadorState
         final enCursoActivo =
             sala.fase != FaseSala.finalizada && !sala.yaConcedi;
 
-        return Scaffold(
+        final contenidoPrincipal = sala.fase == FaseSala.finalizada
+            ? VistaPodioMultijugador(
+                sala: sala,
+                onVolverMenu: () => context
+                    .read<PartidaMultijugadorBloc>()
+                    .add(const AbandonarSalaMultijugador()),
+              )
+            : (sala.fase == FaseSala.configurandoIniciales
+                ? _construirFaseEstrellas(context, state)
+                : _construirFaseRondas(context, state));
+
+        return PopScope(
+          canPop: !enCursoActivo,
+          onPopInvokedWithResult: (didPop, _) {
+            if (didPop || !enCursoActivo) return;
+            _intentarConceder(context);
+          },
+          child: Scaffold(
           appBar: AppBar(
             title: FittedBox(
               fit: BoxFit.scaleDown,
@@ -142,16 +288,77 @@ class _PantallaPartidaMultijugadorState
                 ),
             ],
           ),
-          body: sala.fase == FaseSala.finalizada
-              ? VistaPodioMultijugador(
-                  sala: sala,
-                  onVolverMenu: () => context
-                      .read<PartidaMultijugadorBloc>()
-                      .add(const AbandonarSalaMultijugador()),
-                )
-              : (sala.fase == FaseSala.configurandoIniciales
-                  ? _construirFaseEstrellas(context, state)
-                  : _construirFaseRondas(context, state)),
+          body: Stack(
+            children: [
+              contenidoPrincipal,
+              if (_avisoCentralTexto != null)
+                Positioned.fill(
+                  child: IgnorePointer(
+                    child: Center(
+                      child: AnimatedOpacity(
+                        opacity: _mostrarAvisoCentral ? 1.0 : 0.0,
+                        duration: const Duration(milliseconds: 280),
+                        child: Container(
+                          key: const Key('aviso_central_region_completada'),
+                          margin: const EdgeInsets.symmetric(horizontal: 28),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 10,
+                          ),
+                          decoration: BoxDecoration(
+                            color:
+                                const Color(0xFF0F172A).withValues(alpha: 0.78),
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(
+                              color: (_avisoCentralColor ?? Colors.amber)
+                                  .withValues(alpha: 0.9),
+                              width: 1.8,
+                            ),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withValues(alpha: 0.18),
+                                blurRadius: 12,
+                                offset: const Offset(0, 4),
+                              ),
+                            ],
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Container(
+                                width: 14,
+                                height: 14,
+                                decoration: BoxDecoration(
+                                  color: _avisoCentralColor ?? Colors.amber,
+                                  shape: BoxShape.circle,
+                                  border: Border.all(
+                                    color: Colors.white,
+                                    width: 1.5,
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 10),
+                              Flexible(
+                                child: Text(
+                                  _avisoCentralTexto!,
+                                  textAlign: TextAlign.center,
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 13.5,
+                                    fontWeight: FontWeight.w800,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        ),
         );
       },
     );
@@ -338,7 +545,6 @@ class _PantallaPartidaMultijugadorState
                 estado:
                     valor != null ? EstadoCasilla.usado : EstadoCasilla.sinUsar,
                 valor: valor,
-                reglaCorta: celda?.region.tipo.reglaCorta,
                 tieneEstrella: esEstrella,
               ),
               if (esEstrella && valor == null)
@@ -362,6 +568,8 @@ class _PantallaPartidaMultijugadorState
     PartidaMultijugadorActiva state,
   ) {
     final sala = state.sala;
+    final esperandoDados =
+        sala.esperandoTiroDados || sala.dado1 == null || sala.dado2 == null;
     final d1 = sala.dado1 ?? 1;
     final d2 = sala.dado2 ?? 1;
     final dado1Colocar =
@@ -373,6 +581,19 @@ class _PantallaPartidaMultijugadorState
     if (sala.yaConcedi) {
       instruccionRonda =
           'Has concedido la partida. Viendo el progreso del grupo.';
+    } else if (esperandoDados) {
+      if (sala.soyAnfitrion) {
+        instruccionRonda =
+            '¡Te toca tirar los dados para iniciar la Ronda ${sala.rondaActual}!';
+      } else if (sala.anfitrionReconectando) {
+        final seg = sala.segundosReconexionAnfitrion;
+        final cuenta = seg != null ? ': ${seg}s' : '';
+        instruccionRonda =
+            'El anfitrión ${sala.nombreAnfitrion} perdió conexión (esperando reconexión$cuenta)...';
+      } else {
+        instruccionRonda =
+            'Esperando a que ${sala.nombreAnfitrion} tire los dados para la Ronda ${sala.rondaActual}...';
+      }
     } else if (sala.yaConfirmeEnRonda) {
       final listos =
           sala.jugadoresEnCompetencia.where((j) => j.confirmoAccionActual).length;
@@ -457,6 +678,78 @@ class _PantallaPartidaMultijugadorState
               ),
               if (sala.yaConcedi)
                 _construirAvisoConcedido(context)
+              else if (esperandoDados)
+                Padding(
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 12.0, vertical: 5.0),
+                  child: Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 14, vertical: 10),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(18),
+                      border: Border.all(
+                        color: sala.soyAnfitrion
+                            ? Colors.amber.shade400
+                            : Colors.blueGrey.shade100,
+                        width: sala.soyAnfitrion ? 1.6 : 1.0,
+                      ),
+                    ),
+                    child: sala.soyAnfitrion
+                        ? ElevatedButton.icon(
+                            key: const Key('boton_tirar_dados_multi'),
+                            onPressed: state.conexion.tipo ==
+                                    TipoEstadoConexionCliente.conectado
+                                ? () => context
+                                    .read<PartidaMultijugadorBloc>()
+                                    .add(const SolicitarTirarDadosMultijugador())
+                                : null,
+                            icon: const Icon(Icons.casino_rounded, size: 22),
+                            label: Text(
+                              'Tirar Dados (Ronda ${sala.rondaActual})',
+                              style: const TextStyle(
+                                fontSize: 15,
+                                fontWeight: FontWeight.w900,
+                              ),
+                            ),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xFFD97706),
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(
+                                  vertical: 12, horizontal: 16),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(14),
+                              ),
+                            ),
+                          )
+                        : Row(
+                            key: const Key('aviso_esperando_dados_anfitrion'),
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(
+                                Icons.hourglass_top_rounded,
+                                size: 20,
+                                color: Colors.blueGrey.shade600,
+                              ),
+                              const SizedBox(width: 8),
+                              Flexible(
+                                child: Text(
+                                  sala.anfitrionReconectando
+                                      ? 'El anfitrión ${sala.nombreAnfitrion} perdió conexión (esperando reconexión${sala.segundosReconexionAnfitrion != null ? ': ${sala.segundosReconexionAnfitrion}s' : ''})...'
+                                      : 'Esperando a que ${sala.nombreAnfitrion} tire los dados...',
+                                  textAlign: TextAlign.center,
+                                  style: TextStyle(
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w800,
+                                    color: Colors.blueGrey.shade700,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                  ),
+                )
               else
                 Padding(
                   padding: const EdgeInsets.symmetric(
@@ -607,7 +900,22 @@ class _PantallaPartidaMultijugadorState
         return GestureDetector(
           key: ValueKey('multi_casilla_${fila}_$col'),
           onTap: () {
-            if (!state.puedeInteractuarConTablero) return;
+            if (!state.puedeInteractuarConTablero) {
+              if (state.sala.esperandoTiroDados) {
+                _mostrarToast(
+                  context,
+                  state.sala.soyAnfitrion
+                      ? 'Pulsa "Tirar Dados" para comenzar la ronda.'
+                      : 'Espera a que el anfitrión tire los dados.',
+                );
+              } else if (state.sala.yaConfirmeEnRonda) {
+                _mostrarToast(
+                  context,
+                  'Jugada enviada. Esperando al resto de jugadores...',
+                );
+              }
+              return;
+            }
             if (esLugarValido) {
               context
                   .read<PartidaMultijugadorBloc>()
@@ -622,6 +930,17 @@ class _PantallaPartidaMultijugadorState
                     .read<PartidaMultijugadorBloc>()
                     .add(SeleccionarAnclaMultijugador(coord));
               }
+            } else if (state.anclaSeleccionada == null &&
+                state.indiceDadoSeleccionado == null) {
+              _mostrarToast(
+                context,
+                'Elige una casilla destacada o toca un dado.',
+              );
+            } else {
+              _mostrarToast(
+                context,
+                'Casilla no válida. Toca una iluminada en verde.',
+              );
             }
           },
           child: CasillaJuego(
@@ -632,7 +951,6 @@ class _PantallaPartidaMultijugadorState
             esAnclaElegible: esAnclaElegible,
             esLugarValido: esLugarValido,
             valorPreview: esLugarValido ? state.numeroAColocar : null,
-            reglaCorta: celda?.region.tipo.reglaCorta,
             tieneEstrella: state.nivel.casillasIniciales.contains(coord),
           ),
         );

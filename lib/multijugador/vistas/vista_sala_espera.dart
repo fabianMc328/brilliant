@@ -10,6 +10,7 @@ import '../dominio/estado_sala_multijugador.dart';
 import '../dominio/estados_jugador_sala.dart';
 import '../dominio/jugador_multijugador.dart';
 import '../widgets/banner_conexion_red.dart';
+import '../widgets/dialogo_selector_mapa_multijugador.dart';
 import '../widgets/miniatura_mapa_multijugador.dart';
 
 /// Vista en vivo del Lobby (hasta 6 jugadores), código copiable, mapa compartido y botón Listo.
@@ -24,6 +25,17 @@ class VistaSalaEspera extends StatelessWidget {
     required this.conexion,
     this.avisoError,
   });
+
+  Future<void> _abrirSelectorMapa(BuildContext context) async {
+    final lobbyBloc = context.read<LobbyBloc>();
+    final nuevoNivelId = await DialogoSelectorMapaMultijugador.mostrar(
+      context,
+      nivelActualId: sala.nivelId,
+    );
+    if (nuevoNivelId != null && nuevoNivelId != sala.nivelId) {
+      lobbyBloc.add(CambiarNivelLobby(nuevoNivelId));
+    }
+  }
 
   void _copiarCodigo(BuildContext context) {
     Clipboard.setData(ClipboardData(text: sala.codigoSala));
@@ -50,7 +62,6 @@ class VistaSalaEspera extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final nivelSeleccionado = CatalogoNiveles.porId(sala.nivelId);
-    final niveles = CatalogoNiveles.todos;
 
     return Column(
       children: [
@@ -125,71 +136,83 @@ class VistaSalaEspera extends StatelessWidget {
                     const SizedBox(height: 10),
 
                     // Mapa compartido por todos
-                    Container(
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(18),
-                        border: Border.all(color: Colors.blueGrey.shade100),
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            children: [
-                              MiniaturaMapaMultijugador(
-                                nivel: nivelSeleccionado,
-                                tamano: 52,
-                              ),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      'Mapa Compartido: ${nivelSeleccionado.nombre}',
-                                      style: const TextStyle(
-                                        fontSize: 14.5,
-                                        fontWeight: FontWeight.w900,
+                    InkWell(
+                      onTap: sala.soyAnfitrion
+                          ? () => _abrirSelectorMapa(context)
+                          : null,
+                      borderRadius: BorderRadius.circular(18),
+                      child: Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(18),
+                          border: Border.all(
+                            color: sala.soyAnfitrion
+                                ? Colors.blue.shade200
+                                : Colors.blueGrey.shade100,
+                          ),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            Row(
+                              children: [
+                                MiniaturaMapaMultijugador(
+                                  nivel: nivelSeleccionado,
+                                  tamano: 54,
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        'Mapa Compartido: ${nivelSeleccionado.nombre}',
+                                        style: const TextStyle(
+                                          fontSize: 14.5,
+                                          fontWeight: FontWeight.w900,
+                                        ),
                                       ),
-                                    ),
-                                    const SizedBox(height: 2),
-                                    Text(
-                                      'Dificultad ${nivelSeleccionado.dificultad} • Todos juegan el mismo tablero',
-                                      style: TextStyle(
-                                        fontSize: 11.5,
-                                        color: Colors.blueGrey.shade600,
+                                      const SizedBox(height: 2),
+                                      Text(
+                                        'Dificultad ${nivelSeleccionado.dificultad} • Todos juegan el mismo tablero',
+                                        style: TextStyle(
+                                          fontSize: 11.5,
+                                          color: Colors.blueGrey.shade600,
+                                        ),
                                       ),
-                                    ),
-                                  ],
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                            if (sala.soyAnfitrion) ...[
+                              const SizedBox(height: 10),
+                              OutlinedButton.icon(
+                                key: const Key('boton_seleccionar_mapa_lobby'),
+                                onPressed: () => _abrirSelectorMapa(context),
+                                icon: const Icon(
+                                  Icons.grid_view_rounded,
+                                  size: 17,
+                                ),
+                                label: const Text('Seleccionar mapa'),
+                                style: OutlinedButton.styleFrom(
+                                  foregroundColor: Colors.blue.shade800,
+                                  backgroundColor: Colors.blue.shade50,
+                                  side: BorderSide(color: Colors.blue.shade200),
+                                  padding: const EdgeInsets.symmetric(
+                                    vertical: 8,
+                                    horizontal: 12,
+                                  ),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
                                 ),
                               ),
                             ],
-                          ),
-                          if (sala.soyAnfitrion) ...[
-                            const SizedBox(height: 8),
-                            Wrap(
-                              spacing: 6,
-                              runSpacing: 6,
-                              children: niveles.map((n) {
-                                final seleccionado = n.id == sala.nivelId;
-                                return ChoiceChip(
-                                  key: Key('lobby_mapa_${n.id}'),
-                                  label: Text(
-                                    n.nombre,
-                                    style: const TextStyle(fontSize: 12),
-                                  ),
-                                  selected: seleccionado,
-                                  onSelected: (_) {
-                                    context
-                                        .read<LobbyBloc>()
-                                        .add(CambiarNivelLobby(n.id));
-                                  },
-                                );
-                              }).toList(),
-                            ),
                           ],
-                        ],
+                        ),
                       ),
                     ),
                     const SizedBox(height: 10),
@@ -405,7 +428,9 @@ class _FilaJugadorLobby extends StatelessWidget {
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Text(
-                'Reconectando...',
+                jugador.segundosReconexionRestantes != null
+                    ? 'Reconectando (${jugador.segundosReconexionRestantes}s)'
+                    : 'Reconectando...',
                 style: TextStyle(
                   fontSize: 10.5,
                   fontWeight: FontWeight.w800,

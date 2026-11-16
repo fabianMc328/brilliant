@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:brilliant/autenticacion/dominio/usuario.dart';
 import 'package:brilliant/multijugador/bloc/partida_multijugador_bloc.dart';
+import 'package:brilliant/multijugador/dominio/estado_carrera_region.dart';
 import 'package:brilliant/multijugador/dominio/estado_sala_multijugador.dart';
 import 'package:brilliant/multijugador/dominio/estados_jugador_sala.dart';
 import 'package:brilliant/multijugador/dominio/jugador_multijugador.dart';
@@ -11,6 +13,7 @@ import 'package:brilliant/multijugador/infraestructura/repositorio_multijugador_
 import 'package:brilliant/multijugador/vistas/pantalla_inicio_modo.dart';
 import 'package:brilliant/multijugador/vistas/pantalla_lobby_multijugador.dart';
 import 'package:brilliant/multijugador/vistas/pantalla_partida_multijugador.dart';
+import 'package:brilliant/niveles/catalogo_niveles.dart';
 
 List<ResumenJugador> _crearSeisJugadores({required bool todosListos}) {
   return List.generate(
@@ -29,20 +32,43 @@ List<ResumenJugador> _crearSeisJugadores({required bool todosListos}) {
 
 void main() {
   group('Pantallas y Widgets Multijugador', () {
-    testWidgets('PantallaInicioModo navega a Solitario y a Multijugador',
+    testWidgets('PantallaInicioModo muestra diseño nuevo y navega a Solitario y Multijugador',
         (tester) async {
       final repo = RepositorioMultijugadorFake();
       addTearDown(repo.cerrar);
 
+      final usuario = Usuario(
+        id: 'u1',
+        apodo: 'Fabian',
+        email: 'fabian@brilliant.com',
+        fechaRegistro: DateTime(2026, 1, 1),
+      );
+
       await tester.pumpWidget(
         MaterialApp(
-          home: PantallaInicioModo(repositorioMultijugador: repo),
+          home: PantallaInicioModo(
+            repositorioMultijugador: repo,
+            usuarioAutenticado: usuario,
+          ),
         ),
       );
       await tester.pumpAndSettle();
 
+      expect(find.text('Bienvenido, Fabian'), findsOneWidget);
+      expect(find.text('Cómo jugar'), findsOneWidget);
+      expect(find.text('Salir'), findsOneWidget);
+      expect(find.text('Modos de juego'), findsOneWidget);
+      expect(
+        find.text('Juego de tablero y lógica de dados en regiones'),
+        findsNothing,
+      );
       expect(find.text('Modo Solitario'), findsOneWidget);
       expect(find.text('Multijugador (2 a 6 Jugadores)'), findsOneWidget);
+      expect(
+        find.text(
+            'Crea o únete a salas con el código para competir con tus amigos.'),
+        findsOneWidget,
+      );
 
       // Navega a Modo Solitario y regresa
       await tester.tap(find.byKey(const Key('boton_modo_solitario')));
@@ -72,6 +98,16 @@ void main() {
       );
       await tester.pumpAndSettle();
 
+      // Abrir selector visual de mapa en Crear Sala y elegir Nivel 3
+      await tester.tap(find.byKey(const Key('boton_seleccionar_mapa_crear')));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('dialogo_selector_mapa')), findsOneWidget);
+      expect(find.byKey(const Key('opcion_mapa_nivel_1')), findsOneWidget);
+      expect(find.byKey(const Key('opcion_mapa_nivel_3')), findsOneWidget);
+      await tester.tap(find.byKey(const Key('opcion_mapa_nivel_3')));
+      await tester.pumpAndSettle();
+      expect(find.text('Nivel 3 • Avanzado'), findsOneWidget);
+
       await tester.enterText(
         find.byKey(const Key('campo_apodo_multijugador')),
         'Jugador1',
@@ -82,6 +118,14 @@ void main() {
       // Estamos en la sala con código ABC234 y 1/6 jugadores
       expect(find.byKey(const Key('texto_codigo_sala')), findsOneWidget);
       expect(find.text('ABC234'), findsOneWidget);
+
+      // Cambiar mapa desde el Lobby con la ventana de selección
+      await tester.tap(find.byKey(const Key('boton_seleccionar_mapa_lobby')));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('dialogo_selector_mapa')), findsOneWidget);
+      await tester.tap(find.byKey(const Key('opcion_mapa_nivel_2')));
+      await tester.pumpAndSettle();
+      expect(find.text('Mapa Compartido: Nivel 2'), findsOneWidget);
 
       // Con 1 solo jugador, Comenzar Partida está deshabilitado
       final btnIniciarSolo = tester.widget<ElevatedButton>(
@@ -199,6 +243,177 @@ void main() {
       expect(find.byKey(const Key('vista_podio_multijugador')), findsOneWidget);
       expect(find.text('¡Victoria Brillante!'), findsOneWidget);
     });
+
+    testWidgets(
+        'Muestra aviso central al completar región, nombres por lugar al pulsar tarjeta y puntos visibles',
+        (tester) async {
+      final repo = RepositorioMultijugadorFake();
+      repo.emitirEstadoConexion(const EstadoConexionCliente.conectado());
+      addTearDown(repo.cerrar);
+
+      final primeraRegion = CatalogoNiveles.nivel1.regiones.first;
+      final regionId = primeraRegion.id;
+      final nombreRegionBonito = regionId.replaceAll('_', ' ');
+
+      final salaInicial = EstadoSalaMultijugador(
+        codigoSala: 'K7M4P9',
+        miJugadorId: 'j1',
+        fase: FaseSala.jugandoRondas,
+        nivelId: 'nivel_1',
+        rondaActual: 1,
+        dado1: 4,
+        dado2: 2,
+        segundosRestantes: 50,
+        metaPuntos: 20,
+        jugadores: _crearSeisJugadores(todosListos: true),
+      );
+
+      final bloc = PartidaMultijugadorBloc(
+        repositorio: repo,
+        salaInicial: salaInicial,
+      );
+      addTearDown(bloc.close);
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: BlocProvider.value(
+            value: bloc,
+            child: const PantallaPartidaMultijugador(),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // Puntos visibles en formato "18 pts"
+      expect(find.text('18 pts'), findsOneWidget);
+      expect(find.text('15 pts'), findsOneWidget);
+
+      // Jugador2 completa la primera región -> aparece aviso central no bloqueante
+      repo.emitirEstadoSala(
+        EstadoSalaMultijugador(
+          codigoSala: 'K7M4P9',
+          miJugadorId: 'j1',
+          fase: FaseSala.jugandoRondas,
+          nivelId: 'nivel_1',
+          rondaActual: 2,
+          dado1: 5,
+          dado2: 1,
+          segundosRestantes: 60,
+          metaPuntos: 20,
+          carreraPorRegion: {
+            regionId: EstadoCarreraRegion(
+              regionId: regionId,
+              completadosPrevios: 1,
+              idsJugadoresCompletaron: const ['j2'],
+            ),
+          },
+          jugadores: _crearSeisJugadores(todosListos: true),
+        ),
+      );
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+
+      expect(
+        find.byKey(const Key('aviso_central_region_completada')),
+        findsOneWidget,
+      );
+      expect(
+        find.text('¡Jugador2 completó $nombreRegionBonito!'),
+        findsOneWidget,
+      );
+
+      // Tocar la tarjeta de color de esa región y ver el lugar + nombre del jugador
+      await tester.tap(find.text(nombreRegionBonito));
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(Key('lista_completados_$regionId')), findsOneWidget);
+      expect(find.text('1.º Lugar'), findsWidgets);
+      expect(find.text('Jugador2'), findsWidgets);
+
+      // Esperar a que termine el timer de 3s del aviso central
+      await tester.pump(const Duration(seconds: 4));
+    });
+
+    testWidgets(
+        'Solo el anfitrión ve Tirar Dados cuando esperandoTiroDados=true y acceso muestra IP sin campo manual',
+        (tester) async {
+      final repo = RepositorioMultijugadorFake();
+      repo.configurarUrlServidor('ws://192.168.0.13:8080');
+      repo.emitirEstadoConexion(const EstadoConexionCliente.conectado());
+      addTearDown(repo.cerrar);
+
+      // 1. VistaAccesoSala muestra mensaje "Conectado al servidor: 192.168.0.13" sin campo manual
+      await tester.pumpWidget(
+        MaterialApp(
+          home: PantallaLobbyMultijugador(repositorioExterno: repo),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('Conectado al servidor: 192.168.0.13'), findsOneWidget);
+      expect(find.byKey(const Key('campo_url_servidor')), findsNothing);
+
+      // 2. Anfitrión (j1) esperando tiro de dados -> ve botón Tirar Dados
+      final blocHost = PartidaMultijugadorBloc(
+        repositorio: repo,
+        salaInicial: EstadoSalaMultijugador(
+          codigoSala: 'K7M4P9',
+          miJugadorId: 'j1',
+          fase: FaseSala.jugandoRondas,
+          nivelId: 'nivel_1',
+          rondaActual: 1,
+          esperandoTiroDados: true,
+          jugadores: _crearSeisJugadores(todosListos: true),
+        ),
+      );
+      addTearDown(blocHost.close);
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: BlocProvider.value(
+            value: blocHost,
+            child: const PantallaPartidaMultijugador(),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const Key('boton_tirar_dados_multi')), findsOneWidget);
+      await tester.tap(find.byKey(const Key('boton_tirar_dados_multi')));
+      await tester.pumpAndSettle();
+      expect(repo.tirarDadosFueLlamado, isTrue);
+
+      // 3. Invitado (j2) esperando tiro de dados -> NO ve botón, ve mensaje de espera
+      final blocInvitado = PartidaMultijugadorBloc(
+        repositorio: repo,
+        salaInicial: EstadoSalaMultijugador(
+          codigoSala: 'K7M4P9',
+          miJugadorId: 'j2',
+          fase: FaseSala.jugandoRondas,
+          nivelId: 'nivel_1',
+          rondaActual: 2,
+          esperandoTiroDados: true,
+          jugadores: _crearSeisJugadores(todosListos: true),
+        ),
+      );
+      addTearDown(blocInvitado.close);
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: BlocProvider.value(
+            value: blocInvitado,
+            child: const PantallaPartidaMultijugador(),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const Key('boton_tirar_dados_multi')), findsNothing);
+      expect(
+        find.byKey(const Key('aviso_esperando_dados_anfitrion')),
+        findsOneWidget,
+      );
+    });
   });
 
   group('Responsividad Móvil Multijugador (320x480 a 412x915)', () {
@@ -226,7 +441,17 @@ void main() {
 
         // 1. PantallaInicioModo
         await tester.pumpWidget(
-          MaterialApp(home: PantallaInicioModo(repositorioMultijugador: repo)),
+          MaterialApp(
+            home: PantallaInicioModo(
+              repositorioMultijugador: repo,
+              usuarioAutenticado: Usuario(
+                id: 'u1',
+                apodo: 'Fabian',
+                email: 'fabian@brilliant.com',
+                fechaRegistro: DateTime(2026, 1, 1),
+              ),
+            ),
+          ),
         );
         await tester.pumpAndSettle();
 
@@ -310,5 +535,190 @@ void main() {
         expect(find.byKey(const Key('vista_podio_multijugador')), findsOneWidget);
       });
     }
+  });
+
+  group('Flujos UX corregidos (Persistencia de formulario y reconexión anfitrión)', () {
+    testWidgets(
+      'PantallaLobbyMultijugador conserva apodo y código si falla al unirse',
+      (tester) async {
+        final repo = RepositorioMultijugadorFake();
+        addTearDown(repo.cerrar);
+
+        await tester.pumpWidget(
+          MaterialApp(
+            home: PantallaLobbyMultijugador(
+              repositorioExterno: repo,
+              apodoInicial: 'Fabian',
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        await tester.enterText(
+          find.byKey(const Key('campo_codigo_invitacion')),
+          'K7M4P9',
+        );
+        repo.proximoFalloSimulado = const FalloMultijugador(
+          codigo: CodigoFalloMultijugador.salaNoEncontrada,
+          mensaje: 'No se encontró ninguna sala con ese código.',
+        );
+
+        await tester.tap(find.byKey(const Key('boton_unirse_sala')));
+        await tester.pumpAndSettle();
+
+        expect(find.byKey(const Key('alerta_error_lobby')), findsOneWidget);
+        final campoApodo = tester.widget<TextField>(
+          find.byKey(const Key('campo_apodo_multijugador')),
+        );
+        final campoCodigo = tester.widget<TextField>(
+          find.byKey(const Key('campo_codigo_invitacion')),
+        );
+        expect(campoApodo.controller?.text, 'Fabian');
+        expect(campoCodigo.controller?.text, 'K7M4P9');
+      },
+    );
+
+    testWidgets(
+      'Invitado ve aviso explícito si el anfitrión está reconectando al tirar dados',
+      (tester) async {
+        final repo = RepositorioMultijugadorFake();
+        addTearDown(repo.cerrar);
+
+        final bloc = PartidaMultijugadorBloc(
+          repositorio: repo,
+          salaInicial: const EstadoSalaMultijugador(
+            codigoSala: 'K7M4P9',
+            miJugadorId: 'j2',
+            fase: FaseSala.jugandoRondas,
+            nivelId: 'nivel_1',
+            rondaActual: 2,
+            esperandoTiroDados: true,
+            jugadores: [
+              ResumenJugador(
+                id: 'j1',
+                apodo: 'Fabian',
+                esAnfitrion: true,
+                estaListo: true,
+                participacion: EstadoParticipacion.reconectando,
+              ),
+              ResumenJugador(
+                id: 'j2',
+                apodo: 'Invitado',
+                esAnfitrion: false,
+                estaListo: true,
+                participacion: EstadoParticipacion.conectado,
+              ),
+            ],
+          ),
+        );
+        addTearDown(bloc.close);
+
+        await tester.pumpWidget(
+          MaterialApp(
+            home: BlocProvider.value(
+              value: bloc,
+              child: const PantallaPartidaMultijugador(),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        expect(
+          find.textContaining('perdió conexión (esperando reconexión)'),
+          findsWidgets,
+        );
+
+        // Actualiza contador en tiempo real cuando llegan segundosReconexionRestantes
+        repo.emitirEstadoSala(
+          const EstadoSalaMultijugador(
+            codigoSala: 'K7M4P9',
+            miJugadorId: 'j2',
+            fase: FaseSala.jugandoRondas,
+            nivelId: 'nivel_1',
+            rondaActual: 2,
+            esperandoTiroDados: true,
+            mensajeEventoReciente:
+                'Fabian se desconectó. Tiempo para reconectar: 27s',
+            jugadores: [
+              ResumenJugador(
+                id: 'j1',
+                apodo: 'Fabian',
+                esAnfitrion: true,
+                estaListo: true,
+                participacion: EstadoParticipacion.reconectando,
+                segundosReconexionRestantes: 27,
+              ),
+              ResumenJugador(
+                id: 'j2',
+                apodo: 'Invitado',
+                esAnfitrion: false,
+                estaListo: true,
+                participacion: EstadoParticipacion.conectado,
+              ),
+            ],
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        expect(find.textContaining('27s'), findsWidgets);
+        expect(find.text('Reconectando (27s)'), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      'Al pulsar tarjeta de región se muestra el mapa con esa zona resaltada',
+      (tester) async {
+        final repo = RepositorioMultijugadorFake();
+        addTearDown(repo.cerrar);
+
+        final bloc = PartidaMultijugadorBloc(
+          repositorio: repo,
+          salaInicial: const EstadoSalaMultijugador(
+            codigoSala: 'K7M4P9',
+            miJugadorId: 'j1',
+            fase: FaseSala.jugandoRondas,
+            nivelId: 'nivel_1',
+            rondaActual: 1,
+            dado1: 2,
+            dado2: 4,
+            jugadores: [
+              ResumenJugador(
+                id: 'j1',
+                apodo: 'Fabian',
+                esAnfitrion: true,
+                estaListo: true,
+                participacion: EstadoParticipacion.conectado,
+              ),
+            ],
+          ),
+        );
+        addTearDown(bloc.close);
+
+        await tester.pumpWidget(
+          MaterialApp(
+            home: BlocProvider.value(
+              value: bloc,
+              child: const PantallaPartidaMultijugador(),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        // Pulsamos la tarjeta "verde 1" en el panel de carrera de regiones
+        await tester.ensureVisible(find.text('verde 1'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('verde 1'));
+        await tester.pumpAndSettle();
+
+        expect(
+          find.byKey(const Key('mapa_region_resaltada_verde_1')),
+          findsOneWidget,
+        );
+        expect(
+          find.text('Ubicación de verde 1 en el mapa'),
+          findsOneWidget,
+        );
+      },
+    );
   });
 }

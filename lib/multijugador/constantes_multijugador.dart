@@ -34,13 +34,15 @@ class ConstantesMultijugador {
 
   // Tiempos de juego, red y tolerancia a desconexiones
   static const int puertoServidorPorDefecto = 8080;
+  static const int puertoDescubrimientoUdp = 45454;
+  static const String mensajeDescubrimientoUdp = 'BRILLIANT_DISCOVER';
   static const String urlServidorLocalPorDefecto = 'ws://localhost:8080';
   static const String urlServidorAndroidEmulador = 'ws://10.0.2.2:8080';
 
   static const int segundosFaseInicial = 60;
   static const int segundosPorRonda = 60;
-  static const int segundosGraciaReconexionPartida = 45;
-  static const int segundosGraciaReconexionLobby = 20;
+  static const int segundosGraciaReconexionPartida = 30;
+  static const int segundosGraciaReconexionLobby = 30;
 
   static const Duration intervaloHeartbeat = Duration(seconds: 5);
   static const Duration timeoutConexionInicial = Duration(seconds: 6);

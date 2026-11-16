@@ -1,21 +1,30 @@
 import 'package:flutter/material.dart';
 import '../../niveles/nivel_definicion.dart';
 import '../../region.dart';
+import '../../tablero.dart';
 
-/// Miniatura 7x7 de solo lectura para previsualizar el mapa compartido en el lobby.
+/// Miniatura 7x7 de solo lectura para previsualizar el mapa compartido o resaltar una región concreta.
 class MiniaturaMapaMultijugador extends StatelessWidget {
   final NivelDefinicion nivel;
+  final Tablero? tablero;
   final double tamano;
+  final bool mostrarEstrellas;
+  final String? regionResaltadaId;
 
   const MiniaturaMapaMultijugador({
     super.key,
     required this.nivel,
+    this.tablero,
     this.tamano = 56,
+    this.mostrarEstrellas = true,
+    this.regionResaltadaId,
   });
 
   @override
   Widget build(BuildContext context) {
-    final tablero = nivel.crearTablero();
+    final tableroActivo = tablero ?? nivel.crearTablero();
+    final estrellas = nivel.casillasIniciales.toSet();
+    final tamanoEstrella = (tamano / 9.5).clamp(5.0, 14.0);
 
     return Container(
       width: tamano,
@@ -30,20 +39,39 @@ class MiniaturaMapaMultijugador extends StatelessWidget {
         physics: const NeverScrollableScrollPhysics(),
         gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
           crossAxisCount: 7,
-          crossAxisSpacing: 1.0,
-          mainAxisSpacing: 1.0,
+          crossAxisSpacing: 1.5,
+          mainAxisSpacing: 1.5,
         ),
         itemCount: 49,
         itemBuilder: (context, index) {
           final fila = index ~/ 7;
           final columna = index % 7;
-          final celda = tablero.celdas[Coordenada(fila, columna)];
-          final color = celda?.region.tipo.color ?? Colors.grey;
+          final coord = Coordenada(fila, columna);
+          final celda = tableroActivo.celdas[coord];
+          final region = celda?.region;
+          final colorBase = region?.tipo.color ?? Colors.grey;
+          final estaResaltada = regionResaltadaId == null ||
+              region?.id == regionResaltadaId;
+          final color =
+              estaResaltada ? colorBase : Colors.grey.shade300;
+          final esEstrella = mostrarEstrellas && estrellas.contains(coord);
+
           return Container(
             decoration: BoxDecoration(
               color: color,
-              borderRadius: BorderRadius.circular(1.5),
+              borderRadius: BorderRadius.circular(2.0),
+              border: regionResaltadaId != null && estaResaltada
+                  ? Border.all(color: const Color(0xFF0F172A), width: 1.1)
+                  : null,
             ),
+            alignment: Alignment.center,
+            child: esEstrella
+                ? Icon(
+                    Icons.star_rounded,
+                    size: tamanoEstrella,
+                    color: Colors.white,
+                  )
+                : null,
           );
         },
       ),

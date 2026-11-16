@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import '../../niveles/catalogo_niveles.dart';
 import '../../region.dart';
 import '../../tablero.dart';
 import '../dominio/estado_carrera_region.dart';
 import '../dominio/estado_sala_multijugador.dart';
+import 'miniatura_mapa_multijugador.dart';
 
 /// Muestra en una tira horizontal los 3 escalones de puntos de cada región en la carrera (1.º, 2.º, 3.º).
 /// Al pulsar sobre cualquier región, se abre un modal con el detalle completo de su regla y puntuación.
@@ -16,6 +18,15 @@ class PanelCarreraRegiones extends StatelessWidget {
     required this.tableroLocal,
   });
 
+  String _nombreJugador(String jugadorId) {
+    for (final j in sala.jugadores) {
+      if (j.id == jugadorId) {
+        return j.id == sala.miJugadorId ? '${j.apodo} (Tú)' : j.apodo;
+      }
+    }
+    return jugadorId;
+  }
+
   void _mostrarDetalleRegion(
     BuildContext context,
     Region region,
@@ -28,132 +39,266 @@ class PanelCarreraRegiones extends StatelessWidget {
         .where((c) => c.region.id == region.id && !c.estaVacia)
         .length;
     final totalCeldas = region.coordenadas.length;
+    final idsCompletaron = carrera?.idsJugadoresCompletaron ?? const <String>[];
 
     showModalBottomSheet(
       context: context,
+      isScrollControlled: true,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
-      builder: (_) => Padding(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Container(
-                  width: 32,
-                  height: 32,
-                  decoration: BoxDecoration(
-                    color: region.tipo.color,
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Región: ${region.id.replaceAll('_', ' ')}',
-                        style: const TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w900,
-                        ),
-                      ),
-                      Text(
-                        '$totalCeldas casillas en el tablero • $completadas/$totalCeldas llenas',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: Colors.blueGrey.shade600,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 14),
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: region.tipo.color.withValues(alpha: 0.12),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: region.tipo.color.withValues(alpha: 0.4)),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+      builder: (_) => SafeArea(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
                 children: [
-                  Text(
-                    'Regla: ${region.tipo.descripcion}',
-                    style: TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w800,
-                      color: Colors.blueGrey.shade900,
+                  Container(
+                    width: 32,
+                    height: 32,
+                    decoration: BoxDecoration(
+                      color: region.tipo.color,
+                      borderRadius: BorderRadius.circular(8),
                     ),
                   ),
-                  const SizedBox(height: 4),
-                  Text(
-                    'Resumen: ${region.tipo.reglaCorta}',
-                    style: TextStyle(
-                      fontSize: 11.5,
-                      fontWeight: FontWeight.w600,
-                      color: Colors.blueGrey.shade700,
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Región: ${region.id.replaceAll('_', ' ')}',
+                          style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w900,
+                          ),
+                        ),
+                        Text(
+                          '$totalCeldas casillas en el tablero • $completadas/$totalCeldas llenas',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.blueGrey.shade600,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 ],
               ),
-            ),
-            const SizedBox(height: 14),
-            const Text(
-              'Escalones de Carrera:',
-              style: TextStyle(fontSize: 13, fontWeight: FontWeight.w800),
-            ),
-            const SizedBox(height: 6),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
-              children: [
-                _TarjetaEscalonDetalle(
-                  posicion: '1.º Lugar',
-                  puntos: pts[1] ?? 0,
-                  activo: (carrera?.escalonActual ?? 1) == 1,
+              const SizedBox(height: 14),
+              Center(
+                child: Column(
+                  children: [
+                    MiniaturaMapaMultijugador(
+                      key: Key('mapa_region_resaltada_${region.id}'),
+                      nivel: CatalogoNiveles.porId(sala.nivelId),
+                      tablero: tableroLocal,
+                      regionResaltadaId: region.id,
+                      tamano: 128,
+                      mostrarEstrellas: false,
+                    ),
+                    const SizedBox(height: 5),
+                    Text(
+                      'Ubicación de ${region.id.replaceAll('_', ' ')} en el mapa',
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w700,
+                        color: Colors.blueGrey.shade600,
+                      ),
+                    ),
+                  ],
                 ),
-                _TarjetaEscalonDetalle(
-                  posicion: '2.º Lugar',
-                  puntos: pts[2] ?? 0,
-                  activo: (carrera?.escalonActual ?? 1) == 2,
-                ),
-                _TarjetaEscalonDetalle(
-                  posicion: '3.º Lugar+',
-                  puntos: pts[3] ?? 0,
-                  activo: (carrera?.escalonActual ?? 1) >= 3,
-                ),
-              ],
-            ),
-            if (yoComplete) ...[
+              ),
               const SizedBox(height: 12),
               Container(
                 width: double.infinity,
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFD1FAE5),
-                  borderRadius: BorderRadius.circular(10),
+                  color: region.tipo.color.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(12),
+                  border:
+                      Border.all(color: region.tipo.color.withValues(alpha: 0.4)),
                 ),
-                child: Text(
-                  '¡Ya completaste esta región! Ganaste +${misPuntos ?? 0} puntos.',
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w800,
-                    color: Color(0xFF065F46),
-                  ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Regla: ${region.tipo.descripcion}',
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w800,
+                        color: Colors.blueGrey.shade900,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'Resumen: ${region.tipo.reglaCorta}',
+                      style: TextStyle(
+                        fontSize: 11.5,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.blueGrey.shade700,
+                      ),
+                    ),
+                  ],
                 ),
               ),
+              const SizedBox(height: 14),
+              const Text(
+                'Escalones de Carrera:',
+                style: TextStyle(fontSize: 13, fontWeight: FontWeight.w800),
+              ),
+              const SizedBox(height: 6),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceAround,
+                children: [
+                  _TarjetaEscalonDetalle(
+                    posicion: '1.º Lugar',
+                    puntos: pts[1] ?? 0,
+                    activo: (carrera?.escalonActual ?? 1) == 1,
+                  ),
+                  _TarjetaEscalonDetalle(
+                    posicion: '2.º Lugar',
+                    puntos: pts[2] ?? 0,
+                    activo: (carrera?.escalonActual ?? 1) == 2,
+                  ),
+                  _TarjetaEscalonDetalle(
+                    posicion: '3.º Lugar+',
+                    puntos: pts[3] ?? 0,
+                    activo: (carrera?.escalonActual ?? 1) >= 3,
+                  ),
+                ],
+              ),
+              const SizedBox(height: 14),
+              const Text(
+                'Lugares completados:',
+                style: TextStyle(fontSize: 13, fontWeight: FontWeight.w800),
+              ),
+              const SizedBox(height: 6),
+              if (idsCompletaron.isEmpty)
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade100,
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Text(
+                    'Ningún jugador ha completado esta región todavía.',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Colors.blueGrey.shade600,
+                    ),
+                  ),
+                )
+              else
+                Column(
+                  key: Key('lista_completados_${region.id}'),
+                  children: List.generate(idsCompletaron.length, (index) {
+                    final jugadorId = idsCompletaron[index];
+                    final nombre = _nombreJugador(jugadorId);
+                    final esYo = jugadorId == sala.miJugadorId;
+                    final lugar = index + 1;
+                    final etiquetaLugar = lugar == 1
+                        ? '1.º Lugar'
+                        : (lugar == 2 ? '2.º Lugar' : '$lugar.º Lugar');
+                    final ptsEscalon =
+                        pts[lugar <= 3 ? lugar : 3] ?? (pts[3] ?? 0);
+
+                    return Container(
+                      margin: const EdgeInsets.only(bottom: 6),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 8,
+                      ),
+                      decoration: BoxDecoration(
+                        color: esYo
+                            ? const Color(0xFFD1FAE5)
+                            : Colors.blueGrey.shade50,
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(
+                          color: esYo
+                              ? const Color(0xFF34D399)
+                              : Colors.blueGrey.shade200,
+                        ),
+                      ),
+                      child: Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 7,
+                              vertical: 2,
+                            ),
+                            decoration: BoxDecoration(
+                              color: lugar == 1
+                                  ? Colors.amber.shade700
+                                  : (lugar == 2
+                                      ? Colors.blueGrey.shade600
+                                      : Colors.brown.shade400),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: Text(
+                              etiquetaLugar,
+                              style: const TextStyle(
+                                fontSize: 10.5,
+                                fontWeight: FontWeight.w900,
+                                color: Colors.white,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Text(
+                              nombre,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w800,
+                                color: esYo
+                                    ? const Color(0xFF065F46)
+                                    : const Color(0xFF0F172A),
+                              ),
+                            ),
+                          ),
+                          Text(
+                            '+$ptsEscalon pts',
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w800,
+                              color: Colors.blueGrey.shade700,
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  }),
+                ),
+              if (yoComplete) ...[
+                const SizedBox(height: 8),
+                Container(
+                  width: double.infinity,
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFD1FAE5),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Text(
+                    '¡Ya completaste esta región! Ganaste +${misPuntos ?? 0} puntos.',
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w800,
+                      color: Color(0xFF065F46),
+                    ),
+                  ),
+                ),
+              ],
+              const SizedBox(height: 6),
             ],
-            const SizedBox(height: 10),
-          ],
+          ),
         ),
       ),
     );

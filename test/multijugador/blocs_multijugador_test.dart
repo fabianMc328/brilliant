@@ -12,6 +12,7 @@ import 'package:brilliant/multijugador/bloc/partida_multijugador_evento.dart';
 import 'package:brilliant/multijugador/dominio/estado_sala_multijugador.dart';
 import 'package:brilliant/multijugador/dominio/estados_jugador_sala.dart';
 import 'package:brilliant/multijugador/dominio/jugador_multijugador.dart';
+import 'package:brilliant/multijugador/dominio/mensajes_protocolo.dart';
 import 'package:brilliant/multijugador/dominio/modelos_mapa.dart';
 import 'package:brilliant/multijugador/infraestructura/repositorio_multijugador_fake.dart';
 import 'package:brilliant/region.dart';
@@ -239,6 +240,138 @@ void main() {
       bloc.add(const SolicitarConcederPartida());
       await Future<void>.delayed(const Duration(milliseconds: 20));
       expect(repo.concederFueLlamado, isTrue);
+
+      await bloc.close();
+    });
+
+    test('LobbyBloc preserva chat en sala y lo transfiere a PartidaMultijugadorBloc',
+        () async {
+      final lobbyBloc = LobbyBloc(repositorio: repo);
+      lobbyBloc.add(const SolicitarCrearSala(apodo: 'Fabian'));
+      await Future<void>.delayed(const Duration(milliseconds: 20));
+
+      final msg = MensajeChat(
+        id: 'm1',
+        codigoSala: 'ABC234',
+        remitenteId: 'j1',
+        remitenteApodo: 'Fabian',
+        texto: 'Hola grupo',
+        fecha: DateTime(2026, 1, 1),
+      );
+      repo.emitirMensajeChat(msg);
+      await Future<void>.delayed(const Duration(milliseconds: 20));
+
+      // Actualización de sala dentro del lobby NO debe borrar historialChat
+      repo.emitirEstadoSala(
+        const EstadoSalaMultijugador(
+          codigoSala: 'ABC234',
+          miJugadorId: 'j1',
+          fase: FaseSala.enLobby,
+          nivelId: 'nivel_1',
+          jugadores: [
+            ResumenJugador(
+              id: 'j1',
+              apodo: 'Fabian',
+              esAnfitrion: true,
+              estaListo: true,
+              participacion: EstadoParticipacion.conectado,
+            ),
+          ],
+        ),
+      );
+      await Future<void>.delayed(const Duration(milliseconds: 20));
+      expect((lobbyBloc.state as LobbyEnSalaEspera).historialChat.length, 1);
+
+      // Al iniciar partida, LobbyTransicionAPartida lleva ese historialChat
+      repo.emitirEstadoSala(
+        const EstadoSalaMultijugador(
+          codigoSala: 'ABC234',
+          miJugadorId: 'j1',
+          fase: FaseSala.configurandoIniciales,
+          nivelId: 'nivel_1',
+          jugadores: [],
+        ),
+      );
+      await Future<void>.delayed(const Duration(milliseconds: 20));
+      final transicion = lobbyBloc.state as LobbyTransicionAPartida;
+      expect(transicion.historialChat.map((m) => m.texto), contains('Hola grupo'));
+
+      final partidaBloc = PartidaMultijugadorBloc(
+        repositorio: repo,
+        salaInicial: transicion.salaInicial,
+        historialChatInicial: transicion.historialChat,
+      );
+      expect(
+        (partidaBloc.state as PartidaMultijugadorActiva)
+            .historialChat
+            .map((m) => m.texto),
+        contains('Hola grupo'),
+      );
+
+      await partidaBloc.close();
+      await lobbyBloc.close();
+    });
+
+    test('PartidaMultijugadorBloc conserva mensajeAviso ante ticks del reloj',
+        () async {
+      final sala = const EstadoSalaMultijugador(
+        codigoSala: 'ABC234',
+        miJugadorId: 'j1',
+        fase: FaseSala.jugandoRondas,
+        nivelId: 'nivel_1',
+        rondaActual: 1,
+        dado1: 2,
+        dado2: 5,
+        segundosRestantes: 40,
+        jugadores: [
+          ResumenJugador(
+            id: 'j1',
+            apodo: 'Fabian',
+            esAnfitrion: true,
+            estaListo: true,
+            participacion: EstadoParticipacion.conectado,
+          ),
+        ],
+      );
+
+      final bloc = PartidaMultijugadorBloc(
+        repositorio: repo,
+        salaInicial: sala,
+      );
+
+      // Ancla en celda vacía dispara mensajeAviso
+      bloc.add(const SeleccionarAnclaMultijugador(Coordenada(0, 0)));
+      await Future<void>.delayed(const Duration(milliseconds: 20));
+      final avisoInicial = (bloc.state as PartidaMultijugadorActiva).mensajeAviso;
+      expect(avisoInicial, isNotNull);
+
+      // Llega tick del reloj de la misma ronda
+      repo.emitirEstadoSala(
+        const EstadoSalaMultijugador(
+          codigoSala: 'ABC234',
+          miJugadorId: 'j1',
+          fase: FaseSala.jugandoRondas,
+          nivelId: 'nivel_1',
+          rondaActual: 1,
+          dado1: 2,
+          dado2: 5,
+          segundosRestantes: 39,
+          jugadores: [
+            ResumenJugador(
+              id: 'j1',
+              apodo: 'Fabian',
+              esAnfitrion: true,
+              estaListo: true,
+              participacion: EstadoParticipacion.conectado,
+            ),
+          ],
+        ),
+      );
+      await Future<void>.delayed(const Duration(milliseconds: 20));
+      expect(
+        (bloc.state as PartidaMultijugadorActiva).mensajeAviso,
+        avisoInicial,
+      );
 
       await bloc.close();
     });

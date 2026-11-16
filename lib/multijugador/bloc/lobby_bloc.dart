@@ -268,19 +268,24 @@ class LobbyBloc extends Bloc<LobbyEvento, LobbyEstado> {
     SalaLobbyRecibidaInterna event,
     Emitter<LobbyEstado> emit,
   ) {
+    final chatActual = state is LobbyEnSalaEspera
+        ? (state as LobbyEnSalaEspera).historialChat
+        : const <MensajeChat>[];
+
     if (event.sala.fase != FaseSala.enLobby) {
       emit(
         LobbyTransicionAPartida(
           urlServidor: _repositorio.urlServidorActual,
           salaInicial: event.sala,
           conexion: _repositorio.estadoConexionActual,
+          historialChat: chatActual,
         ),
       );
       return;
     }
 
-    if (state is LobbyEnSalaEspera &&
-        identical((state as LobbyEnSalaEspera).sala, event.sala)) {
+    final actual = state is LobbyEnSalaEspera ? state as LobbyEnSalaEspera : null;
+    if (actual != null && identical(actual.sala, event.sala)) {
       return;
     }
 
@@ -289,6 +294,8 @@ class LobbyBloc extends Bloc<LobbyEvento, LobbyEstado> {
         urlServidor: _repositorio.urlServidorActual,
         sala: event.sala,
         conexion: _repositorio.estadoConexionActual,
+        historialChat: chatActual,
+        avisoError: actual?.avisoError,
       ),
     );
   }

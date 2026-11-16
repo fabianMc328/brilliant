@@ -20,7 +20,6 @@ class CasillaJuego extends StatelessWidget {
     this.esAnclaElegible = false,
     this.esLugarValido = false,
     this.valorPreview,
-    this.reglaCorta,
     this.tieneEstrella = false,
   })  : assert(
           valor == null || (valor >= 0 && valor <= 9),
@@ -37,7 +36,6 @@ class CasillaJuego extends StatelessWidget {
   final bool esAnclaElegible;
   final bool esLugarValido;
   final int? valorPreview;
-  final String? reglaCorta;
   final bool tieneEstrella;
 
   Color _obtenerColorFondo() {
@@ -167,29 +165,13 @@ class CasillaJuego extends StatelessWidget {
                       ),
                     ),
                   )
-                : Stack(
-                    alignment: Alignment.center,
-                    children: [
-                      if (tieneEstrella)
-                        const FittedBox(
-                          fit: BoxFit.scaleDown,
-                          child: Icon(
-                            Icons.star_rounded,
-                            size: 24,
-                            color: Colors.amber,
-                          ),
-                        ),
-                      if (esAnclaElegible && !tieneEstrella)
-                        Container(
-                          width: 8,
-                          height: 8,
-                          decoration: BoxDecoration(
-                            color: Colors.amber.shade700,
-                            shape: BoxShape.circle,
-                          ),
-                        ),
-                    ],
-                  )),
+                : (tieneEstrella
+                    ? const Icon(
+                        Icons.star_rounded,
+                        size: 24,
+                        color: Colors.amber,
+                      )
+                    : const SizedBox.shrink())),
       ),
     );
   }

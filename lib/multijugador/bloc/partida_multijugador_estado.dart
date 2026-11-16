@@ -48,6 +48,9 @@ class PartidaMultijugadorActiva extends PartidaMultijugadorEstado {
       conexion.tipo == TipoEstadoConexionCliente.conectado &&
       !sala.yaConcedi &&
       !sala.yaConfirmeEnRonda &&
+      !sala.esperandoTiroDados &&
+      sala.dado1 != null &&
+      sala.dado2 != null &&
       sala.fase == FaseSala.jugandoRondas;
 
   Set<Coordenada> get anclasElegibles {

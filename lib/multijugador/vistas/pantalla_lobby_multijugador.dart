@@ -73,6 +73,7 @@ class _PantallaLobbyMultijugadorState extends State<PantallaLobbyMultijugador> {
                   create: (_) => PartidaMultijugadorBloc(
                     repositorio: _repositorio,
                     salaInicial: state.salaInicial,
+                    historialChatInicial: state.historialChat,
                   ),
                   child: PantallaPartidaMultijugador(
                     alCerrarRepositorio: () async {
@@ -88,7 +89,13 @@ class _PantallaLobbyMultijugadorState extends State<PantallaLobbyMultijugador> {
         },
         builder: (context, state) {
           final enSala = state is LobbyEnSalaEspera;
-          return Scaffold(
+          return PopScope(
+            canPop: !enSala,
+            onPopInvokedWithResult: (didPop, _) {
+              if (didPop || !enSala) return;
+              _confirmarSalirLobby(context);
+            },
+            child: Scaffold(
             appBar: AppBar(
               title: Text(
                 enSala ? 'Sala ${state.sala.codigoSala}' : 'Multijugador',
@@ -129,36 +136,39 @@ class _PantallaLobbyMultijugadorState extends State<PantallaLobbyMultijugador> {
             body: SafeArea(
               child: _construirCuerpo(state),
             ),
+            ),
           );
         },
       ),
     );
   }
 
-  Widget _construirCuerpo(LobbyEstado state) {
-    if (state is LobbyCargando) {
-      return Center(
-        child: Padding(
-          padding: const EdgeInsets.all(24.0),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const CircularProgressIndicator(),
-              const SizedBox(height: 16),
-              Text(
-                state.descripcion,
-                textAlign: TextAlign.center,
-                style: const TextStyle(
-                  fontSize: 15,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-            ],
-          ),
+  Future<void> _confirmarSalirLobby(BuildContext context) async {
+    final confirmar = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('¿Salir de la sala?'),
+        content: const Text(
+          'Si sales ahora dejarás la sala de espera actual.',
         ),
-      );
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text('Quedarse'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: const Text('Salir'),
+          ),
+        ],
+      ),
+    );
+    if (confirmar == true && context.mounted) {
+      context.read<LobbyBloc>().add(const SalirDelLobby());
     }
+  }
 
+  Widget _construirCuerpo(LobbyEstado state) {
     if (state is LobbyEnSalaEspera) {
       return VistaSalaEspera(
         sala: state.sala,
@@ -168,10 +178,13 @@ class _PantallaLobbyMultijugadorState extends State<PantallaLobbyMultijugador> {
     }
 
     final error = state is LobbyAccesoInicial ? state.mensajeError : null;
+    final cargando = state is LobbyCargando;
     return VistaAccesoSala(
       urlServidorActual: state.urlServidor,
       mensajeError: error,
       apodoInicial: widget.apodoInicial,
+      estaCargando: cargando,
+      descripcionCarga: cargando ? state.descripcion : null,
     );
   }
 }

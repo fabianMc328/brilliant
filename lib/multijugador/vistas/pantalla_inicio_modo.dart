@@ -95,249 +95,207 @@ class PantallaInicioModo extends StatelessWidget {
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAFC),
       body: SafeArea(
-        child: Center(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 440),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.stretch,
+        child: Column(
+          children: [
+            // Botones en las esquinas superiores: Cómo jugar (izq) y Salir (der)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  // Tarjeta superior de bienvenida y usuario
-                  if (usuarioAutenticado != null) ...[
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          colors: [
-                            Colors.white,
-                            Colors.blue.shade50.withValues(alpha: 0.5),
-                          ],
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                        ),
-                        borderRadius: BorderRadius.circular(20),
-                        border: Border.all(color: Colors.blue.shade200, width: 1.2),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.04),
-                            blurRadius: 10,
-                            offset: const Offset(0, 3),
-                          ),
-                        ],
-                      ),
-                      child: Row(
-                        children: [
-                          GestureDetector(
-                            onTap: () => _mostrarDialogoPerfil(context, usuarioAutenticado!),
-                            child: CircleAvatar(
-                              radius: 20,
-                              backgroundColor: const Color(0xFF2563EB),
-                              child: Text(
-                                usuarioAutenticado!.apodo.isNotEmpty
-                                    ? usuarioAutenticado!.apodo[0].toUpperCase()
-                                    : 'U',
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.w900,
-                                  fontSize: 16,
-                                ),
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: GestureDetector(
-                              onTap: () => _mostrarDialogoPerfil(context, usuarioAutenticado!),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Text(
-                                    '¡Bienvenido de vuelta!',
-                                    style: TextStyle(
-                                      fontSize: 11,
-                                      fontWeight: FontWeight.w600,
-                                      color: Colors.blueGrey.shade600,
-                                    ),
-                                  ),
-                                  Text(
-                                    usuarioAutenticado!.apodo,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: const TextStyle(
-                                      fontWeight: FontWeight.w900,
-                                      fontSize: 16,
-                                      color: Color(0xFF0F172A),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                          OutlinedButton.icon(
-                            key: const Key('boton_cerrar_sesion'),
-                            onPressed: () {
-                              context.read<AuthBloc>().add(const CerrarSesionSolicitado());
-                            },
-                            icon: const Icon(Icons.logout_rounded, size: 15, color: Color(0xFFDC2626)),
-                            label: const Text(
-                              'Salir',
-                              style: TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeight.w700,
-                                color: Color(0xFFDC2626),
-                              ),
-                            ),
-                            style: OutlinedButton.styleFrom(
-                              side: BorderSide(color: Colors.red.shade200),
-                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                  ],
-
-                  // Logo e identidad de marca
-                  Container(
-                    width: 64,
-                    height: 64,
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF1E293B),
-                      shape: BoxShape.circle,
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.12),
-                          blurRadius: 14,
-                          offset: const Offset(0, 4),
-                        ),
-                      ],
-                    ),
-                    child: const Icon(
-                      Icons.diamond_rounded,
-                      size: 36,
-                      color: Colors.amber,
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  const Text(
-                    'Brilliant',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      fontSize: 34,
-                      fontWeight: FontWeight.w900,
-                      letterSpacing: 1.5,
-                      color: Color(0xFF0F172A),
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    'Juego de tablero y lógica de dados en regiones',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      fontSize: 13.5,
-                      fontWeight: FontWeight.w500,
-                      color: Colors.blueGrey.shade600,
-                    ),
-                  ),
-                  const SizedBox(height: 18),
-
-                  // Botón "¿Cómo Jugar?"
-                  InkWell(
+                  OutlinedButton.icon(
                     key: const Key('boton_como_jugar_inicio'),
-                    onTap: () => DialogoComoJugar.mostrar(context),
-                    borderRadius: BorderRadius.circular(16),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
-                      decoration: BoxDecoration(
-                        color: Colors.amber.shade50,
-                        borderRadius: BorderRadius.circular(16),
-                        border: Border.all(color: Colors.amber.shade400, width: 1.2),
+                    onPressed: () => DialogoComoJugar.mostrar(context),
+                    icon: Icon(
+                      Icons.help_outline_rounded,
+                      size: 16,
+                      color: Colors.amber.shade900,
+                    ),
+                    label: Text(
+                      'Cómo jugar',
+                      style: TextStyle(
+                        fontSize: 12.5,
+                        fontWeight: FontWeight.w700,
+                        color: Colors.amber.shade900,
                       ),
-                      child: Row(
-                        children: [
-                          Icon(Icons.help_outline_rounded,
-                              color: Colors.amber.shade900, size: 22),
-                          const SizedBox(width: 10),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  '¿Cómo Jugar?',
-                                  style: TextStyle(
-                                    fontSize: 13.5,
-                                    fontWeight: FontWeight.w900,
-                                    color: Colors.amber.shade900,
-                                  ),
-                                ),
-                                Text(
-                                  'Reglas detalladas de los 8 colores, dados y puntos',
-                                  style: TextStyle(
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.w500,
-                                    color: Colors.amber.shade900,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          Icon(Icons.chevron_right_rounded,
-                              color: Colors.amber.shade800, size: 20),
-                        ],
+                    ),
+                    style: OutlinedButton.styleFrom(
+                      backgroundColor: Colors.amber.shade50,
+                      side: BorderSide(color: Colors.amber.shade400),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 8,
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
                       ),
                     ),
                   ),
-                  const SizedBox(height: 18),
-
-                  // Tarjeta Modo Solitario
-                  _TarjetaModoJuego(
-                    keyBoton: const Key('boton_modo_solitario'),
-                    icono: Icons.person_rounded,
-                    colorAcento: const Color(0xFF2563EB),
-                    etiquetaBadge: '1 Jugador',
-                    titulo: 'Modo Solitario',
-                    subtitulo:
-                        'Elige entre los 4 tableros oficiales, coloca tus dados con estrategia y maximiza tu puntuación.',
-                    onTap: () {
-                      Navigator.of(context).push(
-                        MaterialPageRoute(
-                          builder: (_) => const PantallaSeleccionNivel(),
+                  if (usuarioAutenticado != null)
+                    OutlinedButton.icon(
+                      key: const Key('boton_cerrar_sesion'),
+                      onPressed: () {
+                        context
+                            .read<AuthBloc>()
+                            .add(const CerrarSesionSolicitado());
+                      },
+                      icon: const Icon(
+                        Icons.logout_rounded,
+                        size: 16,
+                        color: Color(0xFFDC2626),
+                      ),
+                      label: const Text(
+                        'Salir',
+                        style: TextStyle(
+                          fontSize: 12.5,
+                          fontWeight: FontWeight.w700,
+                          color: Color(0xFFDC2626),
                         ),
-                      );
-                    },
-                  ),
-                  const SizedBox(height: 14),
-
-                  // Tarjeta Multijugador
-                  _TarjetaModoJuego(
-                    keyBoton: const Key('boton_modo_multijugador'),
-                    icono: Icons.groups_rounded,
-                    colorAcento: const Color(0xFF059669),
-                    etiquetaBadge: 'En Vivo',
-                    titulo: 'Multijugador (2 a 6 Jugadores)',
-                    subtitulo:
-                        'Crea o únete a salas con código de invitación, compite en tiempo real, usa el chat y gana la carrera de regiones.',
-                    onTap: () {
-                      Navigator.of(context).push(
-                        MaterialPageRoute(
-                          builder: (_) => PantallaLobbyMultijugador(
-                            repositorioExterno: repositorioMultijugador,
-                            apodoInicial: usuarioAutenticado?.apodo,
-                          ),
+                      ),
+                      style: OutlinedButton.styleFrom(
+                        backgroundColor: Colors.red.shade50,
+                        side: BorderSide(color: Colors.red.shade200),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 8,
                         ),
-                      );
-                    },
-                  ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                    )
+                  else
+                    const SizedBox.shrink(),
                 ],
               ),
             ),
-          ),
+
+            Expanded(
+              child: Center(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 20,
+                    vertical: 12,
+                  ),
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 440),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        // Texto centrado arriba del logo
+                        if (usuarioAutenticado != null) ...[
+                          GestureDetector(
+                            onTap: () => _mostrarDialogoPerfil(
+                              context,
+                              usuarioAutenticado!,
+                            ),
+                            child: Text(
+                              'Bienvenido, ${usuarioAutenticado!.apodo}',
+                              textAlign: TextAlign.center,
+                              style: const TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.w800,
+                                color: Color(0xFF334155),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 14),
+                        ],
+
+                        // Logo igual al del login
+                        Center(
+                          child: Container(
+                            padding: const EdgeInsets.all(16),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF1E293B),
+                              shape: BoxShape.circle,
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withValues(alpha: 0.15),
+                                  blurRadius: 16,
+                                  offset: const Offset(0, 4),
+                                ),
+                              ],
+                            ),
+                            child: const Icon(
+                              Icons.casino,
+                              color: Colors.amber,
+                              size: 44,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        const Text(
+                          'Brilliant',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            fontSize: 34,
+                            fontWeight: FontWeight.w900,
+                            letterSpacing: 1.5,
+                            color: Color(0xFF0F172A),
+                          ),
+                        ),
+                        const SizedBox(height: 24),
+
+                        // Apartado Modos de juego
+                        const Text(
+                          'Modos de juego',
+                          style: TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w800,
+                            color: Color(0xFF334155),
+                            letterSpacing: 0.3,
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+
+                        // Tarjeta Modo Solitario
+                        _TarjetaModoJuego(
+                          keyBoton: const Key('boton_modo_solitario'),
+                          icono: Icons.person_rounded,
+                          colorAcento: const Color(0xFF2563EB),
+                          etiquetaBadge: '1 Jugador',
+                          titulo: 'Modo Solitario',
+                          subtitulo:
+                              'Elige entre los 4 tableros oficiales, coloca tus dados con estrategia y maximiza tu puntuación.',
+                          onTap: () {
+                            Navigator.of(context).push(
+                              MaterialPageRoute(
+                                builder: (_) => const PantallaSeleccionNivel(),
+                              ),
+                            );
+                          },
+                        ),
+                        const SizedBox(height: 14),
+
+                        // Tarjeta Multijugador
+                        _TarjetaModoJuego(
+                          keyBoton: const Key('boton_modo_multijugador'),
+                          icono: Icons.groups_rounded,
+                          colorAcento: const Color(0xFF059669),
+                          etiquetaBadge: 'En Vivo',
+                          titulo: 'Multijugador (2 a 6 Jugadores)',
+                          subtitulo:
+                              'Crea o únete a salas con el código para competir con tus amigos.',
+                          onTap: () {
+                            Navigator.of(context).push(
+                              MaterialPageRoute(
+                                builder: (_) => PantallaLobbyMultijugador(
+                                  repositorioExterno: repositorioMultijugador,
+                                  apodoInicial: usuarioAutenticado?.apodo,
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );

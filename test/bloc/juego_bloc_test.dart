@@ -255,6 +255,72 @@ void main() {
           ),
         );
       });
+
+      test('Bloquea re-tirar dados gratis cuando debeTirarDados es false', () async {
+        final tablero = Nivel1Config.crearTablero();
+        final coordEstrella = tablero.celdas.keys.first;
+        tablero.celdas[coordEstrella]?.valor = 3;
+
+        final estado = JuegoEnProgreso(
+          tablero: tablero,
+          dado1: 3,
+          dado2: 4,
+          turno: 2,
+          debeTirarDados: false,
+          hayJugadasDisponibles: true,
+        );
+
+        final blocTest = JuegoBloc();
+        addTearDown(blocTest.close);
+        blocTest.emit(estado);
+
+        blocTest.add(TirarDados());
+
+        await expectLater(
+          blocTest.stream,
+          emits(
+            isA<JuegoEnProgreso>()
+                .having((s) => s.turno, 'no avanza turno', 2)
+                .having((s) => s.dado1, 'conserva dado1', 3)
+                .having((s) => s.dado2, 'conserva dado2', 4)
+                .having((s) => s.debeTirarDados, 'sigue en false', isFalse),
+          ),
+        );
+      });
+
+      test('Detecta fin de partida solitario al completar las 49 casillas', () async {
+        final tablero = Nivel1Config.crearTablero();
+        final ultimaCoord = const Coordenada(0, 3);
+        for (final entry in tablero.celdas.entries) {
+          if (entry.key != ultimaCoord) {
+            entry.value.valor = 5;
+          }
+        }
+
+        final estado = JuegoEnProgreso(
+          tablero: tablero,
+          dado1: 5,
+          dado2: 5,
+          anclaSeleccionada: const Coordenada(0, 2),
+          numeroAColocar: 5,
+          casillasValidas: {ultimaCoord},
+        );
+
+        final blocTest = JuegoBloc();
+        addTearDown(blocTest.close);
+        blocTest.emit(estado);
+
+        blocTest.add(ColocarNumero(ultimaCoord));
+
+        await expectLater(
+          blocTest.stream,
+          emits(
+            isA<JuegoEnProgreso>()
+                .having((s) => s.partidaTerminada, 'termina partida', isTrue)
+                .having((s) => s.debeTirarDados, 'no pide tirar más dados', isFalse),
+          ),
+        );
+      });
     });
   });
 }

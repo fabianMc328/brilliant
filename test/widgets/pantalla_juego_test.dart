@@ -49,5 +49,59 @@ void main() {
       expect(find.byKey(const Key('texto_puntuacion_total')), findsOneWidget);
       expect(find.byKey(const Key('texto_turno')), findsOneWidget);
     });
+
+    testWidgets(
+      'Botón atrás en partida solitario pide confirmación para finalizar',
+      (tester) async {
+        await tester.pumpWidget(
+          MaterialApp(
+            home: Builder(
+              builder: (context) => Scaffold(
+                body: ElevatedButton(
+                  key: const Key('abrir_juego_solitario'),
+                  onPressed: () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => BlocProvider(
+                          create: (_) => JuegoBloc(),
+                          child: const PantallaJuego(),
+                        ),
+                      ),
+                    );
+                  },
+                  child: const Text('Abrir'),
+                ),
+              ),
+            ),
+          ),
+        );
+
+        await tester.tap(find.byKey(const Key('abrir_juego_solitario')));
+        await tester.pumpAndSettle();
+
+        await tester.tap(find.byKey(const Key('boton_aleatorio')));
+        await tester.pumpAndSettle();
+        await tester.tap(find.byKey(const Key('boton_comenzar_nivel')));
+        await tester.pumpAndSettle();
+
+        // Pulsamos la flecha atrás durante una partida activa
+        await tester.tap(find.byKey(const Key('boton_volver_seleccion')));
+        await tester.pumpAndSettle();
+
+        expect(find.text('¿Finalizar partida?'), findsOneWidget);
+
+        // Cancelar mantiene la partida abierta
+        await tester.tap(find.text('Seguir jugando'));
+        await tester.pumpAndSettle();
+        expect(find.byKey(const Key('dado_1')), findsOneWidget);
+
+        // Confirmar cierra la partida y regresa
+        await tester.tap(find.byKey(const Key('boton_volver_seleccion')));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('Finalizar partida'));
+        await tester.pumpAndSettle();
+        expect(find.byKey(const Key('abrir_juego_solitario')), findsOneWidget);
+      },
+    );
   });
 }

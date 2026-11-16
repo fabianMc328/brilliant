@@ -177,6 +177,29 @@ class JuegoBloc extends Bloc<JuegoEvento, JuegoEstado> {
   ) {
     if (state is JuegoEnProgreso) {
       final actual = state as JuegoEnProgreso;
+      if (actual.partidaTerminada) return;
+
+      if (!actual.debeTirarDados && actual.hayJugadasDisponibles) {
+        emit(actual.copiarCon(
+          mensajeFeedback:
+              'Ya tienes dados activos. Coloca un número o pulsa "Pasar Turno".',
+        ));
+        return;
+      }
+
+      if (!_quedanJugadasEnTodoElTablero(actual.tablero)) {
+        emit(actual.copiarCon(
+          debeTirarDados: false,
+          partidaTerminada: true,
+          motivoFin: actual.tablero.celdas.values.every((c) => !c.estaVacia)
+              ? '¡Completaste las 49 casillas del tablero!'
+              : 'Ya no quedan movimientos legales posibles en el tablero.',
+          mensajeFeedback:
+              '¡Partida finalizada! Puntuación total: ${actual.puntuacionTotal} pts.',
+        ));
+        return;
+      }
+
       final d1 = _random.nextInt(6) + 1;
       final d2 = _random.nextInt(6) + 1;
       final hayJugadas = _hayJugadasPosibles(actual.tablero, d1, d2);
@@ -191,7 +214,8 @@ class JuegoBloc extends Bloc<JuegoEvento, JuegoEstado> {
         limpiarNumeroAColocar: true,
         casillasValidas: {},
         hayJugadasDisponibles: hayJugadas,
-        mensajeFeedback: 'Dados tirados: $d1 y $d2. Toca un dado para colocar su número.',
+        mensajeFeedback:
+            'Dados tirados: $d1 y $d2. Toca un dado para colocar su número.',
       ));
     }
   }
@@ -202,6 +226,7 @@ class JuegoBloc extends Bloc<JuegoEvento, JuegoEstado> {
   ) {
     if (state is! JuegoEnProgreso) return;
     final actual = state as JuegoEnProgreso;
+    if (actual.partidaTerminada) return;
 
     if (actual.debeTirarDados) {
       emit(actual.copiarCon(
@@ -255,6 +280,7 @@ class JuegoBloc extends Bloc<JuegoEvento, JuegoEstado> {
   ) {
     if (state is JuegoEnProgreso) {
       final actual = state as JuegoEnProgreso;
+      if (actual.partidaTerminada) return;
 
       if (actual.debeTirarDados) {
         emit(actual.copiarCon(
@@ -322,6 +348,7 @@ class JuegoBloc extends Bloc<JuegoEvento, JuegoEstado> {
   ) {
     if (state is JuegoEnProgreso) {
       final actual = state as JuegoEnProgreso;
+      if (actual.partidaTerminada) return;
 
       if (actual.debeTirarDados) {
         emit(actual.copiarCon(
@@ -366,6 +393,31 @@ class JuegoBloc extends Bloc<JuegoEvento, JuegoEstado> {
       final nuevoDesglose =
           actual.tablero.calcularDesglosePuntos(completadas);
 
+      final tableroLleno =
+          actual.tablero.celdas.values.every((c) => !c.estaVacia);
+      final sinMovimientosFuturos =
+          tableroLleno || !_quedanJugadasEnTodoElTablero(actual.tablero);
+
+      if (sinMovimientosFuturos) {
+        emit(actual.copiarCon(
+          limpiarAncla: true,
+          limpiarNumeroAColocar: true,
+          limpiarDadoSeleccionado: true,
+          casillasValidas: {},
+          debeTirarDados: false,
+          partidaTerminada: true,
+          motivoFin: tableroLleno
+              ? '¡Completaste las 49 casillas del tablero!'
+              : 'Ya no quedan movimientos legales posibles en el tablero.',
+          puntuacionTotal: nuevaPuntuacion,
+          regionesCompletadasIds: completadas,
+          desglosePuntos: nuevoDesglose,
+          mensajeFeedback:
+              '¡Partida finalizada! Puntuación final: $nuevaPuntuacion pts.',
+        ));
+        return;
+      }
+
       // Requerimiento explícito: Una vez puesto el dado, debe volver a picarle
       // obligatoriamente al botón de tirar dados para generar otros dos números.
       emit(actual.copiarCon(
@@ -406,6 +458,19 @@ class JuegoBloc extends Bloc<JuegoEvento, JuegoEstado> {
   ) {
     if (state is JuegoEnProgreso) {
       final actual = state as JuegoEnProgreso;
+      if (actual.partidaTerminada) return;
+
+      if (!_quedanJugadasEnTodoElTablero(actual.tablero)) {
+        emit(actual.copiarCon(
+          debeTirarDados: false,
+          partidaTerminada: true,
+          motivoFin: 'Ya no quedan movimientos legales posibles en el tablero.',
+          mensajeFeedback:
+              '¡Partida finalizada! Puntuación final: ${actual.puntuacionTotal} pts.',
+        ));
+        return;
+      }
+
       final nuevoD1 = _random.nextInt(6) + 1;
       final nuevoD2 = _random.nextInt(6) + 1;
       final hayJugadas = _hayJugadasPosibles(actual.tablero, nuevoD1, nuevoD2);
@@ -423,6 +488,21 @@ class JuegoBloc extends Bloc<JuegoEvento, JuegoEstado> {
         mensajeFeedback: 'Turno pasado. Nuevos dados: $nuevoD1 y $nuevoD2.',
       ));
     }
+  }
+
+  bool _quedanJugadasEnTodoElTablero(Tablero tablero) {
+    if (tablero.celdas.values.every((c) => c.estaVacia)) {
+      return true;
+    }
+    for (final entry in tablero.celdas.entries) {
+      if (entry.value.estaVacia) continue;
+      for (int numero = 1; numero <= 6; numero++) {
+        if (tablero.obtenerPosiblesLugaresParaAncla(entry.key, numero).isNotEmpty) {
+          return true;
+        }
+      }
+    }
+    return false;
   }
 
   // Revisa si hay alguna jugada posible con estos dados.

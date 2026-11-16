@@ -17,11 +17,42 @@ class BannerInstruccion extends StatelessWidget {
     Color colorFondo;
     Color colorTexto;
 
-    if (!state.hayJugadasDisponibles) {
-      mensaje = '¡No hay jugadas posibles con estos dados! Pasa el turno o vuelve a tirar.';
+    if (state.partidaTerminada) {
+      mensaje =
+          '¡Partida finalizada! Puntuación final: ${state.puntuacionTotal} pts.';
+      icono = Icons.emoji_events_rounded;
+      colorFondo = const Color(0xFFD1FAE5);
+      colorTexto = const Color(0xFF065F46);
+    } else if (state.debeTirarDados) {
+      mensaje =
+          '¡Número colocado! Pulsa obligatoriamente "Tirar Dados" para continuar.';
+      icono = Icons.casino_rounded;
+      colorFondo = Colors.amber.shade50;
+      colorTexto = Colors.amber.shade900;
+    } else if (!state.hayJugadasDisponibles) {
+      mensaje =
+          '¡No hay jugadas posibles con [${state.dado1}] y [${state.dado2}]! Pulsa "Pasar Turno".';
       icono = Icons.info_outline;
       colorFondo = Colors.amber.shade50;
       colorTexto = Colors.amber.shade900;
+    } else if (state.indiceDadoSeleccionado != null &&
+        state.anclaSeleccionada == null) {
+      final cantValidas = state.casillasValidas.length;
+      final otroDado =
+          state.indiceDadoSeleccionado == 1 ? state.dado2 : state.dado1;
+      if (cantValidas > 0) {
+        mensaje =
+            'Dado ${state.numeroAColocar} activo. Toca una casilla verde (junto a un $otroDado).';
+        icono = Icons.touch_app_rounded;
+        colorFondo = const Color(0xFFD1FAE5);
+        colorTexto = const Color(0xFF065F46);
+      } else {
+        mensaje =
+            'No hay casillas válidas para el ${state.numeroAColocar} junto a un $otroDado. Prueba el otro dado.';
+        icono = Icons.warning_amber_rounded;
+        colorFondo = Colors.orange.shade50;
+        colorTexto = Colors.orange.shade900;
+      }
     } else if (state.anclaSeleccionada != null) {
       final ancla = state.anclaSeleccionada!;
       final cantValidas = state.casillasValidas.length;
@@ -37,7 +68,8 @@ class BannerInstruccion extends StatelessWidget {
         colorTexto = Colors.orange.shade900;
       }
     } else {
-      mensaje = 'Dados: [${state.dado1}] y [${state.dado2}]. Toca una casilla del tablero con valor ${state.dado1} o ${state.dado2} para seleccionarla como ancla.';
+      mensaje =
+          'Dados: [${state.dado1}] y [${state.dado2}]. Toca un dado o una casilla ancla.';
       icono = Icons.tips_and_updates_outlined;
       colorFondo = Colors.blue.shade50;
       colorTexto = Colors.blue.shade900;
