@@ -1,0 +1,57 @@
+name: Compilar y Publicar APK
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build_release_apk:
+    name: Generar APK de Android
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Descargar repositorio
+        uses: actions/checkout@v4
+
+      - name: Configurar Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Configurar Flutter (stable)
+        uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+          cache: true
+
+      - name: Instalar dependencias
+        run: flutter pub get
+
+      - name: Analizar y ejecutar pruebas
+        run: |
+          flutter analyze
+          flutter test test/pruebas_totales_test.dart
+
+      - name: Compilar APK Release
+        run: |
+          flutter build apk --release
+          cp build/app/outputs/flutter-apk/app-release.apk build/app/outputs/flutter-apk/brilliant.apk
+
+      - name: Publicar en GitHub Releases (latest)
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v1.0.${{ github.run_number }}
+          name: Brilliant v1.0.${{ github.run_number }}
+          body: |
+            Instalador oficial para Android generado automáticamente desde `${{ github.sha }}`.
+
+            Descarga directa más reciente:
+            https://github.com/fabianMc328/brilliant/releases/latest/download/brilliant.apk
+          files: build/app/outputs/flutter-apk/brilliant.apk
+          make_latest: 'true'
