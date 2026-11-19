@@ -4,12 +4,24 @@ import 'dart:io';
 
 import '../constantes_multijugador.dart';
 
-/// Descubre automáticamente el servidor Brilliant en la red local mediante:
-/// 1) Broadcast UDP en el puerto 45454 (respuesta en <150 ms en redes permisivas).
-/// 2) Comprobación rápida de localhost/emulador y escaneo HTTP /salud en subredes privadas reales.
+/// Descubre automáticamente el servidor Brilliant:
+/// 1) Verifica primero el servidor oficial en la nube (Render `wss://...`).
+/// 2) Si no hay internet o no responde, busca en la red local mediante broadcast UDP (45454)
+///    y escaneo HTTP `/salud` en subredes privadas reales.
 Future<String?> buscarServidorEnRedImpl({
   Duration timeout = const Duration(seconds: 5),
+  bool incluirNube = true,
 }) async {
+  if (incluirNube) {
+    final nubeActiva = await verificarServidorActivoImpl(
+      ConstantesMultijugador.urlServidorNubePorDefecto,
+      timeout: const Duration(seconds: 35),
+    );
+    if (nubeActiva) {
+      return ConstantesMultijugador.urlServidorNubePorDefecto;
+    }
+  }
+
   final subredesPriorizadas = await _obtenerSubredesLocalesOrdenadas();
 
   final encontradoUdp = await _descubrirPorUdp(

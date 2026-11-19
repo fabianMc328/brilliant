@@ -38,6 +38,8 @@ class ConstantesMultijugador {
   static const String mensajeDescubrimientoUdp = 'BRILLIANT_DISCOVER';
   static const String urlServidorLocalPorDefecto = 'ws://localhost:8080';
   static const String urlServidorAndroidEmulador = 'ws://10.0.2.2:8080';
+  static const String urlServidorNubePorDefecto =
+      'wss://servidorbrilliant.onrender.com';
 
   static const int segundosFaseInicial = 60;
   static const int segundosPorRonda = 60;

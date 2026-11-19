@@ -8,8 +8,12 @@ class DescubridorServidorLocal {
 
   static Future<String?> buscarServidorEnRed({
     Duration timeout = const Duration(seconds: 5),
+    bool incluirNube = true,
   }) {
-    return impl.buscarServidorEnRedImpl(timeout: timeout);
+    return impl.buscarServidorEnRedImpl(
+      timeout: timeout,
+      incluirNube: incluirNube,
+    );
   }
 
   static Future<bool> verificarServidorActivo(

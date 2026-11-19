@@ -92,6 +92,9 @@ class _VistaAccesoSalaState extends State<VistaAccesoSala> {
       final prefs = await SharedPreferences.getInstance();
       final guardada = prefs.getString(_claveUrlGuardada)?.trim();
       if (guardada != null && guardada.isNotEmpty) {
+        if (kIsWeb && !guardada.startsWith('wss://')) {
+          return null;
+        }
         final activa =
             await DescubridorServidorLocal.verificarServidorActivo(guardada);
         if (activa) return guardada;
@@ -110,6 +113,7 @@ class _VistaAccesoSalaState extends State<VistaAccesoSala> {
   Future<void> _buscarServidorAutomaticamente({
     bool silencioso = false,
     bool forzar = false,
+    bool incluirNube = true,
   }) async {
     if (_buscandoServidor && !forzar) return;
     setState(() {
@@ -117,9 +121,11 @@ class _VistaAccesoSalaState extends State<VistaAccesoSala> {
       _servidorDetectadoConExito = null;
     });
 
-    final buscador =
-        widget.buscadorServidor ?? DescubridorServidorLocal.buscarServidorEnRed;
-    final encontrada = await buscador();
+    final encontrada = widget.buscadorServidor != null
+        ? await widget.buscadorServidor!()
+        : await DescubridorServidorLocal.buscarServidorEnRed(
+            incluirNube: incluirNube,
+          );
 
     if (!mounted) return;
     if (encontrada != null && encontrada.isNotEmpty) {
@@ -272,7 +278,11 @@ class _VistaAccesoSalaState extends State<VistaAccesoSala> {
           TextButton(
             onPressed: () {
               Navigator.of(ctx).pop();
-              _buscarServidorAutomaticamente(silencioso: false, forzar: true);
+              _buscarServidorAutomaticamente(
+                silencioso: false,
+                forzar: true,
+                incluirNube: false,
+              );
             },
             child: const Text('Buscar en Wi-Fi'),
           ),
@@ -644,7 +654,7 @@ class _VistaAccesoSalaState extends State<VistaAccesoSala> {
                       Expanded(
                         child: Text(
                           _buscandoServidor
-                              ? 'Buscando servidor en la red...'
+                              ? 'Conectando con el servidor...'
                               : (_servidorDetectadoConExito == false
                                   ? 'No se encontró servidor en la red • Toca para reintentar'
                                   : 'Conectado al servidor: $ipVisible'),

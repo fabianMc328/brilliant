@@ -1,9 +1,13 @@
 import '../constantes_multijugador.dart';
 
-/// En Flutter Web (Edge/Chrome), el host actual suele coincidir con el servidor.
+/// En Flutter Web (Edge/Chrome), usa por defecto el servidor en la nube salvo que se solicite solo red local.
 Future<String?> buscarServidorEnRedImpl({
   Duration timeout = const Duration(seconds: 5),
+  bool incluirNube = true,
 }) async {
+  if (incluirNube) {
+    return ConstantesMultijugador.urlServidorNubePorDefecto;
+  }
   final host = Uri.base.host;
   if (host.isEmpty) {
     return ConstantesMultijugador.urlServidorLocalPorDefecto;
