@@ -303,10 +303,15 @@ class ClienteWebsocketMultijugador implements RepositorioMultijugador {
       );
     }
 
+    final timeoutEfectivo =
+        uri.scheme == 'wss' && _timeoutOperacion < const Duration(seconds: 40)
+            ? const Duration(seconds: 40)
+            : _timeoutOperacion;
+
     WebSocketChannel? canalTentativo;
     try {
       canalTentativo = _fabricaCanal(uri);
-      await canalTentativo.ready.timeout(_timeoutOperacion);
+      await canalTentativo.ready.timeout(timeoutEfectivo);
     } on TimeoutException {
       canalTentativo?.ready.ignore();
       try {
@@ -634,6 +639,11 @@ class ClienteWebsocketMultijugador implements RepositorioMultijugador {
       resultado = 'ws://${limpia.substring(7)}';
     } else if (limpia.startsWith('https://')) {
       resultado = 'wss://${limpia.substring(8)}';
+    } else if (limpia.contains('.onrender.com') ||
+        limpia.contains('.up.railway.app') ||
+        limpia.contains('.fly.dev') ||
+        limpia.contains('.koyeb.app')) {
+      resultado = 'wss://$limpia';
     } else {
       resultado = 'ws://$limpia';
     }

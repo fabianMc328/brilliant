@@ -149,7 +149,9 @@ class _VistaAccesoSalaState extends State<VistaAccesoSala> {
     if (widget.estaCargando) return;
     final esDispositivoIo = !kIsWeb && !_enPruebasWidget;
 
+    final esNube = _urlServidor.startsWith('wss://');
     if (esDispositivoIo &&
+        !esNube &&
         (_urlServidor.isEmpty ||
             _urlServidor.contains('localhost') ||
             _servidorDetectadoConExito != true)) {
@@ -205,6 +207,100 @@ class _VistaAccesoSalaState extends State<VistaAccesoSala> {
     if (elegido != null && mounted) {
       setState(() => _nivelInicialSeleccionado = elegido);
     }
+  }
+
+  String _normalizarEntradaServidor(String entrada) {
+    final limpia = entrada.trim();
+    if (limpia.isEmpty) return '';
+    if (limpia.startsWith('ws://') || limpia.startsWith('wss://')) {
+      return limpia;
+    }
+    if (limpia.startsWith('https://')) {
+      return 'wss://${limpia.substring(8)}';
+    }
+    if (limpia.startsWith('http://')) {
+      return 'ws://${limpia.substring(7)}';
+    }
+    if (limpia.contains('.onrender.com') ||
+        limpia.contains('.up.railway.app') ||
+        limpia.contains('.fly.dev') ||
+        limpia.contains('.koyeb.app')) {
+      return 'wss://$limpia';
+    }
+    return limpia.contains(':')
+        ? 'ws://$limpia'
+        : 'ws://$limpia:${ConstantesMultijugador.puertoServidorPorDefecto}';
+  }
+
+  Future<void> _abrirConfigurarServidor() async {
+    final ctrl = TextEditingController(text: _urlServidor);
+    final resultado = await showDialog<String>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+        title: const Row(
+          children: [
+            Icon(Icons.cloud_outlined, color: Colors.blue),
+            SizedBox(width: 8),
+            Expanded(child: Text('Servidor Multijugador')),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Pega la URL de Render (ej. https://tu-servidor.onrender.com) o la IP manual de otra red:',
+              style: TextStyle(fontSize: 12.5, color: Colors.black87),
+            ),
+            const SizedBox(height: 10),
+            TextField(
+              key: const Key('campo_url_servidor_modal'),
+              controller: ctrl,
+              keyboardType: TextInputType.url,
+              decoration: InputDecoration(
+                hintText: 'https://servidor-brilliant.onrender.com',
+                isDense: true,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.of(ctx).pop();
+              _buscarServidorAutomaticamente(silencioso: false, forzar: true);
+            },
+            child: const Text('Buscar en Wi-Fi'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text('Cancelar'),
+          ),
+          ElevatedButton(
+            key: const Key('boton_guardar_servidor_modal'),
+            onPressed: () => Navigator.of(ctx).pop(ctrl.text),
+            child: const Text('Usar servidor'),
+          ),
+        ],
+      ),
+    );
+    ctrl.dispose();
+
+    if (resultado == null || !mounted) return;
+    final urlNormalizada = _normalizarEntradaServidor(resultado);
+    if (urlNormalizada.isEmpty) return;
+
+    setState(() {
+      _urlServidor = urlNormalizada;
+      _servidorDetectadoConExito = true;
+      _buscandoServidor = false;
+    });
+    context.read<LobbyBloc>().add(CambiarUrlServidorLobby(urlNormalizada));
+    _guardarUrl(urlNormalizada);
   }
 
   @override
@@ -565,7 +661,7 @@ class _VistaAccesoSalaState extends State<VistaAccesoSala> {
                           ),
                         ),
                       ),
-                      if (!_buscandoServidor)
+                      if (!_buscandoServidor) ...[
                         Icon(
                           Icons.refresh_rounded,
                           size: 17,
@@ -573,6 +669,25 @@ class _VistaAccesoSalaState extends State<VistaAccesoSala> {
                               ? Colors.amber.shade900
                               : const Color(0xFF065F46),
                         ),
+                        const SizedBox(width: 6),
+                        IconButton(
+                          key: const Key('boton_servidor_nube'),
+                          tooltip: 'Servidor en la nube (Render) / IP',
+                          onPressed: _abrirConfigurarServidor,
+                          padding: EdgeInsets.zero,
+                          constraints: const BoxConstraints(
+                            minWidth: 28,
+                            minHeight: 28,
+                          ),
+                          icon: Icon(
+                            Icons.cloud_outlined,
+                            size: 18,
+                            color: _servidorDetectadoConExito == false
+                                ? Colors.amber.shade900
+                                : const Color(0xFF065F46),
+                          ),
+                        ),
+                      ],
                     ],
                   ),
                 ),

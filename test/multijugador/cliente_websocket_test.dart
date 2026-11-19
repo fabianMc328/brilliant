@@ -266,6 +266,12 @@ void main() {
 
       cliente.configurarUrlServidor('ws://192.168.1.50');
       expect(cliente.urlServidorActual, 'ws://192.168.1.50:8080');
+
+      cliente.configurarUrlServidor('https://servidor-brilliant.onrender.com');
+      expect(cliente.urlServidorActual, 'wss://servidor-brilliant.onrender.com');
+
+      cliente.configurarUrlServidor('servidor-brilliant.onrender.com');
+      expect(cliente.urlServidorActual, 'wss://servidor-brilliant.onrender.com');
     });
 
     test('Falla limpiamente cuando servidorBrilliant está apagado o inalcanzable', () async {

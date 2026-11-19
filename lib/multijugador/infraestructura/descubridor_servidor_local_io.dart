@@ -37,25 +37,39 @@ Future<String?> buscarServidorEnRedImpl({
   );
 }
 
-/// Verifica con timeout corto si una URL WebSocket de Brilliant responde en /salud.
+/// Verifica si una URL WebSocket de Brilliant (`ws://` o `wss://`) responde en `/salud`.
 Future<bool> verificarServidorActivoImpl(
   String urlWs, {
   Duration timeout = const Duration(milliseconds: 600),
 }) async {
   final uri = Uri.tryParse(urlWs.trim());
   if (uri == null || uri.host.isEmpty) return false;
-  final puerto = uri.hasPort
-      ? uri.port
-      : ConstantesMultijugador.puertoServidorPorDefecto;
-  final client = HttpClient()..connectionTimeout = timeout;
+  final esSeguro = uri.scheme == 'wss' || uri.scheme == 'https';
+  final esquemaHttp = esSeguro ? 'https' : 'http';
+  final timeoutEfectivo = esSeguro && timeout < const Duration(seconds: 15)
+      ? const Duration(seconds: 15)
+      : timeout;
+  final uriSalud = Uri(
+    scheme: esquemaHttp,
+    host: uri.host,
+    port: uri.hasPort
+        ? uri.port
+        : (esSeguro ? 443 : ConstantesMultijugador.puertoServidorPorDefecto),
+    path: '/salud',
+  );
+  final client = HttpClient()..connectionTimeout = timeoutEfectivo;
   try {
-    final resultado = await _probarSalud(
-      client,
-      uri.host,
-      puerto,
-      timeout: timeout,
-    );
-    return resultado != null;
+    final req = await client.getUrl(uriSalud).timeout(timeoutEfectivo);
+    final res = await req.close().timeout(timeoutEfectivo);
+    if (res.statusCode != HttpStatus.ok) {
+      await res.drain<void>();
+      return false;
+    }
+    final cuerpo = await utf8.decodeStream(res).timeout(timeoutEfectivo);
+    final json = jsonDecode(cuerpo);
+    return json is Map && json['servicio'] == 'servidorBrilliant';
+  } catch (_) {
+    return false;
   } finally {
     client.close(force: true);
   }
