@@ -2,7 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:brilliant/autenticacion/bloc/auth_bloc.dart';
+import 'package:brilliant/autenticacion/bloc/auth_estado.dart';
 import 'package:brilliant/autenticacion/dominio/usuario.dart';
+import 'package:brilliant/autenticacion/infraestructura/repositorio_autenticacion_local.dart';
 import 'package:brilliant/multijugador/bloc/partida_multijugador_bloc.dart';
 import 'package:brilliant/multijugador/dominio/estado_carrera_region.dart';
 import 'package:brilliant/multijugador/dominio/estado_sala_multijugador.dart';
@@ -78,10 +81,13 @@ void main() {
       await tester.pageBack();
       await tester.pumpAndSettle();
 
-      // Navega a Multijugador
+      // Navega a Multijugador y verifica apodo fijo de la cuenta (no editable)
       await tester.tap(find.byKey(const Key('boton_modo_multijugador')));
       await tester.pumpAndSettle();
-      expect(find.byKey(const Key('campo_apodo_multijugador')), findsOneWidget);
+      expect(find.byKey(const Key('campo_apodo_multijugador')), findsNothing);
+      expect(find.byKey(const Key('tarjeta_apodo_fijo')), findsOneWidget);
+      expect(find.byKey(const Key('texto_apodo_multijugador')), findsOneWidget);
+      expect(find.text('Fabian'), findsOneWidget);
       expect(find.byKey(const Key('campo_codigo_invitacion')), findsOneWidget);
     });
 
@@ -93,7 +99,10 @@ void main() {
 
       await tester.pumpWidget(
         MaterialApp(
-          home: PantallaLobbyMultijugador(repositorioExterno: repo),
+          home: PantallaLobbyMultijugador(
+            repositorioExterno: repo,
+            apodoInicial: 'Jugador1',
+          ),
         ),
       );
       await tester.pumpAndSettle();
@@ -108,10 +117,8 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.text('Nivel 3 • Avanzado'), findsOneWidget);
 
-      await tester.enterText(
-        find.byKey(const Key('campo_apodo_multijugador')),
-        'Jugador1',
-      );
+      expect(find.byKey(const Key('campo_apodo_multijugador')), findsNothing);
+      expect(find.text('Jugador1'), findsOneWidget);
       await tester.tap(find.byKey(const Key('boton_crear_sala')));
       await tester.pumpAndSettle();
 
@@ -345,7 +352,10 @@ void main() {
       // 1. VistaAccesoSala muestra mensaje "Conectado al servidor: 192.168.0.13" sin campo manual
       await tester.pumpWidget(
         MaterialApp(
-          home: PantallaLobbyMultijugador(repositorioExterno: repo),
+          home: PantallaLobbyMultijugador(
+            repositorioExterno: repo,
+            apodoInicial: 'Fabian',
+          ),
         ),
       );
       await tester.pumpAndSettle();
@@ -458,7 +468,10 @@ void main() {
         // 2. PantallaLobbyMultijugador (Acceso + Sala de 6 jugadores)
         await tester.pumpWidget(
           MaterialApp(
-            home: PantallaLobbyMultijugador(repositorioExterno: repo),
+            home: PantallaLobbyMultijugador(
+              repositorioExterno: repo,
+              apodoInicial: 'Fabian',
+            ),
           ),
         );
         await tester.pumpAndSettle();
@@ -539,7 +552,45 @@ void main() {
 
   group('Flujos UX corregidos (Persistencia de formulario y reconexión anfitrión)', () {
     testWidgets(
-      'PantallaLobbyMultijugador conserva apodo y código si falla al unirse',
+      'PantallaLobbyMultijugador toma el apodo directo de AuthBloc y no permite editarlo',
+      (tester) async {
+        final repo = RepositorioMultijugadorFake();
+        addTearDown(repo.cerrar);
+
+        final authBloc = AuthBloc(repositorio: RepositorioAutenticacionLocal());
+        addTearDown(authBloc.close);
+        authBloc.emit(
+          AuthAutenticado(
+            usuario: Usuario(
+              id: 'usr_99',
+              apodo: 'ApodoUnico',
+              email: 'unico@brilliant.com',
+              fechaRegistro: DateTime(2026, 1, 1),
+            ),
+          ),
+        );
+
+        await tester.pumpWidget(
+          MaterialApp(
+            home: BlocProvider<AuthBloc>.value(
+              value: authBloc,
+              child: PantallaLobbyMultijugador(repositorioExterno: repo),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        expect(find.byKey(const Key('campo_apodo_multijugador')), findsNothing);
+        expect(find.text('ApodoUnico'), findsOneWidget);
+
+        await tester.tap(find.byKey(const Key('boton_crear_sala')));
+        await tester.pumpAndSettle();
+        expect(find.textContaining('ApodoUnico'), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      'PantallaLobbyMultijugador conserva apodo fijo y código si falla al unirse',
       (tester) async {
         final repo = RepositorioMultijugadorFake();
         addTearDown(repo.cerrar);
@@ -567,13 +618,11 @@ void main() {
         await tester.pumpAndSettle();
 
         expect(find.byKey(const Key('alerta_error_lobby')), findsOneWidget);
-        final campoApodo = tester.widget<TextField>(
-          find.byKey(const Key('campo_apodo_multijugador')),
-        );
+        expect(find.byKey(const Key('campo_apodo_multijugador')), findsNothing);
+        expect(find.text('Fabian'), findsOneWidget);
         final campoCodigo = tester.widget<TextField>(
           find.byKey(const Key('campo_codigo_invitacion')),
         );
-        expect(campoApodo.controller?.text, 'Fabian');
         expect(campoCodigo.controller?.text, 'K7M4P9');
       },
     );

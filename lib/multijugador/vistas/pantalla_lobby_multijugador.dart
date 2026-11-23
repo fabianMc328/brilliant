@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
+import '../../autenticacion/bloc/auth_bloc.dart';
+import '../../autenticacion/bloc/auth_estado.dart';
 import '../../widgets/dialogo_como_jugar.dart';
 import '../bloc/lobby_bloc.dart';
 import '../bloc/lobby_estado.dart';
@@ -168,6 +170,18 @@ class _PantallaLobbyMultijugadorState extends State<PantallaLobbyMultijugador> {
     }
   }
 
+  String? _resolverApodoFijo() {
+    final directo = widget.apodoInicial?.trim();
+    if (directo != null && directo.isNotEmpty) return directo;
+    try {
+      final authState = context.watch<AuthBloc>().state;
+      if (authState is AuthAutenticado) {
+        return authState.usuario.apodo.trim();
+      }
+    } catch (_) {}
+    return null;
+  }
+
   Widget _construirCuerpo(LobbyEstado state) {
     if (state is LobbyEnSalaEspera) {
       return VistaSalaEspera(
@@ -182,7 +196,7 @@ class _PantallaLobbyMultijugadorState extends State<PantallaLobbyMultijugador> {
     return VistaAccesoSala(
       urlServidorActual: state.urlServidor,
       mensajeError: error,
-      apodoInicial: widget.apodoInicial,
+      apodoInicial: _resolverApodoFijo(),
       estaCargando: cargando,
       descripcionCarga: cargando ? state.descripcion : null,
     );

@@ -4,6 +4,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import '../bloc/auth_bloc.dart';
 import '../bloc/auth_estado.dart';
 import '../bloc/auth_evento.dart';
+import '../dominio/validador_auth.dart';
 
 /// Pantalla visual de Login tradicional (Iniciar Sesión / Registro) 100% funcional.
 class PantallaLogin extends StatefulWidget {
@@ -51,69 +52,16 @@ class _PantallaLoginState extends State<PantallaLogin>
     super.dispose();
   }
 
-  String? _validarIdentificadorLogin(String? value) {
-    final texto = value ?? '';
-    final limpio = texto.trim();
-    if (limpio.isEmpty) {
-      return 'Ingresa tu usuario o correo electrónico';
-    }
-    if (limpio.contains('@')) {
-      if (RegExp(r'\s').hasMatch(limpio)) {
-        return 'El correo electrónico no puede contener espacios';
-      }
-      if (!RegExp(r'^[^\s@]+@[^\s@]+\.[^\s@]{2,}$').hasMatch(limpio)) {
-        return 'Ingresa un correo electrónico válido';
-      }
-    } else if (RegExp(r'\s{2,}').hasMatch(limpio)) {
-      return 'El usuario no puede tener espacios consecutivos';
-    }
-    return null;
-  }
+  String? _validarIdentificadorLogin(String? value) =>
+      ValidadorAuth.validarIdentificadorLogin(value);
 
-  String? _validarContrasena(String? value) {
-    final texto = value ?? '';
-    if (texto.isEmpty) {
-      return 'Ingresa tu contraseña';
-    }
-    if (RegExp(r'\s').hasMatch(texto)) {
-      return 'La contraseña no puede contener espacios';
-    }
-    if (texto.length < 6) {
-      return 'La contraseña debe tener al menos 6 caracteres';
-    }
-    return null;
-  }
+  String? _validarContrasena(String? value) =>
+      ValidadorAuth.validarContrasena(value);
 
-  String? _validarApodo(String? value) {
-    final limpio = (value ?? '').trim();
-    if (limpio.isEmpty) {
-      return 'Ingresa un apodo o nombre de jugador';
-    }
-    if (limpio.length < 2 || limpio.length > 18) {
-      return 'Debe tener entre 2 y 18 caracteres';
-    }
-    if (RegExp(r'\s{2,}').hasMatch(limpio)) {
-      return 'No uses espacios consecutivos';
-    }
-    if (limpio.contains('@')) {
-      return 'El apodo no puede contener el símbolo @';
-    }
-    return null;
-  }
+  String? _validarApodo(String? value) => ValidadorAuth.validarApodo(value);
 
-  String? _validarEmailRegistro(String? value) {
-    final limpio = (value ?? '').trim();
-    if (limpio.isEmpty) {
-      return 'Ingresa tu correo electrónico';
-    }
-    if (RegExp(r'\s').hasMatch(limpio)) {
-      return 'El correo electrónico no puede contener espacios';
-    }
-    if (!RegExp(r'^[^\s@]+@[^\s@]+\.[^\s@]{2,}$').hasMatch(limpio)) {
-      return 'Ingresa un correo electrónico válido';
-    }
-    return null;
-  }
+  String? _validarEmailRegistro(String? value) =>
+      ValidadorAuth.validarEmail(value);
 
   String? _validarConfirmacionContrasena(String? value) {
     final texto = value ?? '';
@@ -416,6 +364,8 @@ class _PantallaLoginState extends State<PantallaLogin>
             validator: _validarApodo,
             decoration: InputDecoration(
               labelText: 'Apodo / Nombre de Jugador',
+              helperText: 'Será tu apodo único en toda la app y multijugador',
+              helperMaxLines: 2,
               prefixIcon: const Icon(Icons.badge_outlined),
               border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
               filled: true,

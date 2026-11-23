@@ -6,7 +6,7 @@ import 'autenticacion/bloc/auth_bloc.dart';
 import 'autenticacion/bloc/auth_estado.dart';
 import 'autenticacion/bloc/auth_evento.dart';
 import 'autenticacion/dominio/repositorio_autenticacion.dart';
-import 'autenticacion/infraestructura/repositorio_autenticacion_local.dart';
+import 'autenticacion/infraestructura/repositorio_autenticacion_servidor.dart';
 import 'autenticacion/vistas/pantalla_login.dart';
 import 'multijugador/vistas/pantalla_inicio_modo.dart';
 
@@ -32,7 +32,7 @@ class AplicacionBrilliant extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return RepositoryProvider<RepositorioAutenticacion>(
-      create: (_) => repositorioAuth ?? RepositorioAutenticacionLocal(),
+      create: (_) => repositorioAuth ?? RepositorioAutenticacionServidor(),
       child: BlocProvider<AuthBloc>(
         create: (context) => AuthBloc(
           repositorio: context.read<RepositorioAutenticacion>(),

@@ -4,8 +4,9 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../dominio/repositorio_autenticacion.dart';
 import '../dominio/usuario.dart';
+import '../dominio/validador_auth.dart';
 
-/// Implementación persistente de autenticación tradicional usando SharedPreferences y SHA-256.
+/// Implementación local de autenticación en SharedPreferences + SHA-256 (ideal para pruebas offline).
 class RepositorioAutenticacionLocal implements RepositorioAutenticacion {
   static const String _claveUsuarios = 'brilliant_usuarios_registrados_v1';
   static const String _claveSesionActiva = 'brilliant_sesion_activa_usuario_v1';
@@ -18,7 +19,7 @@ class RepositorioAutenticacionLocal implements RepositorioAutenticacion {
   Future<SharedPreferences> _obtenerPrefs() async {
     final prefs = _prefsInyectadas;
     if (prefs != null) return prefs;
-    return await SharedPreferences.getInstance();
+    return SharedPreferences.getInstance();
   }
 
   String _hashear(String texto) {
@@ -31,38 +32,14 @@ class RepositorioAutenticacionLocal implements RepositorioAutenticacion {
     final prefs = await _obtenerPrefs();
     final jsonStr = prefs.getString(_claveUsuarios);
     if (jsonStr == null || jsonStr.isEmpty) {
-      // Sembrar usuario demo por defecto para pruebas o acceso rápido
-      final demoHash = _hashear('contraseña123');
-      final baseInicial = <String, Map<String, dynamic>>{
-        'usr_fabian': {
-          'usuario': Usuario(
-            id: 'usr_fabian',
-            apodo: 'Fabian',
-            email: 'fabian@brilliant.com',
-            fechaRegistro: DateTime(2026, 1, 1),
-          ).toJson(),
-          'passwordHash': demoHash,
-        },
-      };
-      await prefs.setString(_claveUsuarios, jsonEncode(baseInicial));
-      return baseInicial;
+      return {};
     }
 
     try {
       final decoded = jsonDecode(jsonStr) as Map<String, dynamic>;
-      final bd = decoded.map(
+      return decoded.map(
         (key, value) => MapEntry(key, value as Map<String, dynamic>),
       );
-
-      // Migrar contraseña demo anterior si estaba persistida en el dispositivo
-      final demoUser = bd['usr_fabian'];
-      if (demoUser != null &&
-          demoUser['passwordHash'] == _hashear('password123')) {
-        demoUser['passwordHash'] = _hashear('contraseña123');
-        await prefs.setString(_claveUsuarios, jsonEncode(bd));
-      }
-
-      return bd;
     } catch (_) {
       return {};
     }
@@ -96,58 +73,30 @@ class RepositorioAutenticacionLocal implements RepositorioAutenticacion {
     required String identificador,
     required String contrasena,
   }) async {
+    final errorId = ValidadorAuth.validarIdentificadorLogin(identificador);
+    if (errorId != null) {
+      throw FalloAutenticacion('$errorId.');
+    }
+    final errorPass = ValidadorAuth.validarContrasena(contrasena);
+    if (errorPass != null) {
+      throw FalloAutenticacion('$errorPass.');
+    }
+
     final idLimpio = identificador.trim().toLowerCase();
-
-    if (idLimpio.isEmpty) {
-      throw const FalloAutenticacion(
-        'Ingresa tu usuario o correo electrónico.',
-      );
-    }
-
-    if (idLimpio.contains('@')) {
-      if (RegExp(r'\s').hasMatch(idLimpio)) {
-        throw const FalloAutenticacion(
-          'El correo electrónico no puede contener espacios.',
-        );
-      }
-      final regexEmail = RegExp(r'^[^\s@]+@[^\s@]+\.[^\s@]{2,}$');
-      if (!regexEmail.hasMatch(idLimpio)) {
-        throw const FalloAutenticacion(
-          'Ingresa un correo electrónico válido.',
-        );
-      }
-    } else if (RegExp(r'\s{2,}').hasMatch(idLimpio)) {
-      throw const FalloAutenticacion(
-        'El usuario no puede contener espacios consecutivos.',
-      );
-    }
-
-    if (contrasena.isEmpty) {
-      throw const FalloAutenticacion('Ingresa tu contraseña.');
-    }
-
-    if (RegExp(r'\s').hasMatch(contrasena)) {
-      throw const FalloAutenticacion(
-        'La contraseña no puede contener espacios.',
-      );
-    }
-
-    if (contrasena.length < 6) {
-      throw const FalloAutenticacion(
-        'La contraseña debe tener al menos 6 caracteres.',
-      );
-    }
-
+    final claveApodo = ValidadorAuth.normalizarApodoClave(identificador);
     final bd = await _cargarBaseDatosUsuarios();
     final hashIngresado = _hashear(contrasena);
 
     for (final entry in bd.values) {
       final rawUser = entry['usuario'] as Map<String, dynamic>;
       final email = (rawUser['email'] as String? ?? '').trim().toLowerCase();
-      final apodo = (rawUser['apodo'] as String? ?? '').trim().toLowerCase();
+      final apodoClave =
+          ValidadorAuth.normalizarApodoClave(rawUser['apodo'] as String? ?? '');
       final storedHash = entry['passwordHash'] as String? ?? '';
 
-      if (idLimpio == email || idLimpio == apodo) {
+      final coincide =
+          idLimpio.contains('@') ? idLimpio == email : claveApodo == apodoClave;
+      if (coincide) {
         if (storedHash != hashIngresado) {
           throw const FalloAutenticacion('Contraseña incorrecta.');
         }
@@ -169,61 +118,22 @@ class RepositorioAutenticacionLocal implements RepositorioAutenticacion {
     required String email,
     required String contrasena,
   }) async {
+    final errorApodo = ValidadorAuth.validarApodo(apodo);
+    if (errorApodo != null) {
+      throw FalloAutenticacion('$errorApodo.');
+    }
+    final errorEmail = ValidadorAuth.validarEmail(email);
+    if (errorEmail != null) {
+      throw FalloAutenticacion('$errorEmail.');
+    }
+    final errorPass = ValidadorAuth.validarContrasena(contrasena);
+    if (errorPass != null) {
+      throw FalloAutenticacion('$errorPass.');
+    }
+
     final apodoLimpio = apodo.trim();
+    final apodoClave = ValidadorAuth.normalizarApodoClave(apodoLimpio);
     final emailLimpio = email.trim().toLowerCase();
-
-    if (apodoLimpio.isEmpty) {
-      throw const FalloAutenticacion('Ingresa un apodo o nombre de jugador.');
-    }
-
-    if (apodoLimpio.length < 2 || apodoLimpio.length > 18) {
-      throw const FalloAutenticacion(
-        'El apodo debe contener entre 2 y 18 caracteres.',
-      );
-    }
-
-    if (RegExp(r'\s{2,}').hasMatch(apodoLimpio)) {
-      throw const FalloAutenticacion(
-        'El apodo no puede contener espacios consecutivos.',
-      );
-    }
-
-    if (apodoLimpio.contains('@')) {
-      throw const FalloAutenticacion(
-        'El apodo no puede contener el símbolo @.',
-      );
-    }
-
-    if (emailLimpio.isEmpty) {
-      throw const FalloAutenticacion('Ingresa un correo electrónico.');
-    }
-
-    if (RegExp(r'\s').hasMatch(emailLimpio)) {
-      throw const FalloAutenticacion(
-        'El correo electrónico no puede contener espacios.',
-      );
-    }
-
-    final regexEmail = RegExp(r'^[^\s@]+@[^\s@]+\.[^\s@]{2,}$');
-    if (!regexEmail.hasMatch(emailLimpio)) {
-      throw const FalloAutenticacion('Ingresa un correo electrónico válido.');
-    }
-
-    if (contrasena.isEmpty) {
-      throw const FalloAutenticacion('Ingresa una contraseña.');
-    }
-
-    if (RegExp(r'\s').hasMatch(contrasena)) {
-      throw const FalloAutenticacion(
-        'La contraseña no puede contener espacios.',
-      );
-    }
-
-    if (contrasena.length < 6) {
-      throw const FalloAutenticacion(
-        'La contraseña debe tener al menos 6 caracteres.',
-      );
-    }
 
     final bd = await _cargarBaseDatosUsuarios();
 
@@ -235,15 +145,17 @@ class RepositorioAutenticacionLocal implements RepositorioAutenticacion {
           'El correo electrónico ya está registrado.',
         );
       }
-      if ((rawUser['apodo'] as String? ?? '').trim().toLowerCase() ==
-          apodoLimpio.toLowerCase()) {
+      if (ValidadorAuth.normalizarApodoClave(
+            rawUser['apodo'] as String? ?? '',
+          ) ==
+          apodoClave) {
         throw FalloAutenticacion(
           'El apodo "$apodoLimpio" ya está en uso.',
         );
       }
     }
 
-    final nuevoId = 'usr_${DateTime.now().millisecondsSinceEpoch}';
+    final nuevoId = 'usr_${DateTime.now().microsecondsSinceEpoch}';
     final nuevoUsuario = Usuario(
       id: nuevoId,
       apodo: apodoLimpio,

@@ -12,8 +12,8 @@ import '../infraestructura/descubridor_servidor_local.dart';
 import '../widgets/dialogo_selector_mapa_multijugador.dart';
 import '../widgets/miniatura_mapa_multijugador.dart';
 
-/// Formulario responsivo para ingresar apodo, crear sala o unirse mediante código
-/// conectándose al servidor externo `servidorBrilliant`.
+/// Formulario responsivo para crear sala o unirse mediante código usando el apodo
+/// fijo de la cuenta autenticada al conectarse a `servidorBrilliant`.
 class VistaAccesoSala extends StatefulWidget {
   final String urlServidorActual;
   final String? mensajeError;
@@ -39,17 +39,17 @@ class VistaAccesoSala extends StatefulWidget {
 class _VistaAccesoSalaState extends State<VistaAccesoSala> {
   static const String _claveUrlGuardada = 'brilliant_url_servidor_multi_v1';
 
-  late final TextEditingController _apodoCtrl;
   final TextEditingController _codigoCtrl = TextEditingController();
   late String _urlServidor;
   String _nivelInicialSeleccionado = 'nivel_1';
   bool _buscandoServidor = false;
   bool? _servidorDetectadoConExito;
 
+  String get _apodoJugador => widget.apodoInicial?.trim() ?? '';
+
   @override
   void initState() {
     super.initState();
-    _apodoCtrl = TextEditingController(text: widget.apodoInicial ?? '');
     _urlServidor = widget.urlServidorActual;
     if (widget.buscadorServidor != null || !_enPruebasWidget) {
       _buscandoServidor = true;
@@ -146,7 +146,6 @@ class _VistaAccesoSalaState extends State<VistaAccesoSala> {
 
   @override
   void dispose() {
-    _apodoCtrl.dispose();
     _codigoCtrl.dispose();
     super.dispose();
   }
@@ -176,7 +175,7 @@ class _VistaAccesoSalaState extends State<VistaAccesoSala> {
     _aplicarUrlYEjecutar(() {
       context.read<LobbyBloc>().add(
             SolicitarCrearSala(
-              apodo: _apodoCtrl.text,
+              apodo: _apodoJugador,
               nivelId: _nivelInicialSeleccionado,
             ),
           );
@@ -188,7 +187,7 @@ class _VistaAccesoSalaState extends State<VistaAccesoSala> {
       context.read<LobbyBloc>().add(
             SolicitarUnirseASala(
               codigoSala: _codigoCtrl.text.trim().toUpperCase(),
-              apodo: _apodoCtrl.text,
+              apodo: _apodoJugador,
             ),
           );
     });
@@ -397,41 +396,72 @@ class _VistaAccesoSalaState extends State<VistaAccesoSala> {
                 const SizedBox(height: 12),
               ],
 
-              // 1. Apodo del jugador
+              // 1. Apodo fijo del jugador (vinculado a su cuenta)
               Container(
+                key: const Key('tarjeta_apodo_fijo'),
                 padding: const EdgeInsets.all(14),
                 decoration: BoxDecoration(
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(18),
                   border: Border.all(color: Colors.blueGrey.shade100),
                 ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+                child: Row(
                   children: [
-                    const Text(
-                      'Tu Nombre de Jugador',
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w800,
-                        color: Color(0xFF0F172A),
+                    Container(
+                      width: 42,
+                      height: 42,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF2563EB).withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: const Icon(
+                        Icons.verified_user_outlined,
+                        color: Color(0xFF2563EB),
+                        size: 22,
                       ),
                     ),
-                    const SizedBox(height: 8),
-                    TextField(
-                      key: const Key('campo_apodo_multijugador'),
-                      controller: _apodoCtrl,
-                      maxLength: ConstantesMultijugador.maxLongitudApodo,
-                      decoration: InputDecoration(
-                        hintText: 'Ej. Fabian',
-                        counterText: '',
-                        prefixIcon: const Icon(Icons.person_outline_rounded),
-                        isDense: true,
-                        filled: true,
-                        fillColor: Colors.grey.shade50,
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Tu Nombre de Jugador',
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w700,
+                              color: Colors.blueGrey.shade600,
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            _apodoJugador.isNotEmpty
+                                ? _apodoJugador
+                                : 'Sin cuenta activa',
+                            key: const Key('texto_apodo_multijugador'),
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              fontSize: 16.5,
+                              fontWeight: FontWeight.w900,
+                              color: Color(0xFF0F172A),
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            'Se usa el apodo de tu cuenta en todos los modos',
+                            style: TextStyle(
+                              fontSize: 11.5,
+                              fontWeight: FontWeight.w600,
+                              color: Colors.blueGrey.shade500,
+                            ),
+                          ),
+                        ],
                       ),
+                    ),
+                    Icon(
+                      Icons.lock_outline_rounded,
+                      size: 18,
+                      color: Colors.blueGrey.shade400,
                     ),
                   ],
                 ),
