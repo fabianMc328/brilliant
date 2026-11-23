@@ -646,7 +646,8 @@ class _PantallaJuegoState extends State<PantallaJuego> {
                                   coord == state.anclaSeleccionada;
                               final bool esAnclaElegible =
                                   state.anclasElegibles.contains(coord) &&
-                                      state.anclaSeleccionada == null;
+                                      state.anclaSeleccionada == null &&
+                                      state.indiceDadoSeleccionado == null;
                               final bool esLugarValido =
                                   state.casillasValidas.contains(coord);
 
@@ -691,11 +692,12 @@ class _PantallaJuegoState extends State<PantallaJuego> {
                                       'Esta ancla tiene valor $valor. Los dados salieron con ${state.dado1} y ${state.dado2}.',
                                     );
                                   } else {
-                                    if (state.anclaSeleccionada == null) {
+                                    if (state.anclaSeleccionada == null &&
+                                        state.indiceDadoSeleccionado == null) {
                                       _mostrarToast(
                                         context,
                                         details.globalPosition,
-                                        'Primero toca un ancla con valor ${state.dado1} o ${state.dado2}.',
+                                        'Primero toca un dado o un ancla con valor ${state.dado1} o ${state.dado2}.',
                                       );
                                     } else {
                                       _mostrarToast(
