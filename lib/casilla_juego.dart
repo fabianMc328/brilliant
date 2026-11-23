@@ -40,24 +40,27 @@ class CasillaJuego extends StatelessWidget {
 
   Color _obtenerColorFondo() {
     if (esLugarValido) {
-      // Tono ligeramente más brillante y saturado para destacar
-      final hsl = HSLColor.fromColor(colorBase);
-      return hsl.withLightness(0.85).toColor();
+      // Iluminación vibrante y clara para señalar lugares disponibles sin tapar el color base
+      return Color.lerp(colorBase, Colors.white, 0.35) ?? colorBase;
     }
 
     final hsl = HSLColor.fromColor(colorBase);
+    final saturacionFuerte = (hsl.saturation + 0.14).clamp(0.0, 1.0);
     switch (estado) {
       case EstadoCasilla.sinUsar:
         return hsl
-            .withLightness((hsl.lightness + 0.32).clamp(0.0, 0.94))
+            .withSaturation(saturacionFuerte)
+            .withLightness((hsl.lightness + 0.04).clamp(0.32, 0.62))
             .toColor();
       case EstadoCasilla.usado:
         return hsl
-            .withLightness((hsl.lightness + 0.06).clamp(0.0, 0.78))
+            .withSaturation((hsl.saturation + 0.16).clamp(0.0, 1.0))
+            .withLightness((hsl.lightness - 0.07).clamp(0.24, 0.52))
             .toColor();
       case EstadoCasilla.puntuado:
         return hsl
-            .withLightness((hsl.lightness - 0.18).clamp(0.12, 0.50))
+            .withSaturation((hsl.saturation + 0.18).clamp(0.0, 1.0))
+            .withLightness((hsl.lightness - 0.18).clamp(0.16, 0.40))
             .toColor();
     }
   }
@@ -68,17 +71,17 @@ class CasillaJuego extends StatelessWidget {
 
   Color _obtenerColorBorde() {
     if (esAnclaSeleccionada) {
-      return Colors.amber.shade600;
+      return Colors.amber.shade500;
     }
     if (esLugarValido) {
-      return const Color(0xFF059669);
+      return const Color(0xFF10B981);
     }
     if (colorBorde != null) {
       return colorBorde!;
     }
     final hsl = HSLColor.fromColor(colorBase);
     return hsl
-        .withLightness((hsl.lightness - 0.25).clamp(0.08, 0.55))
+        .withLightness((hsl.lightness - 0.28).clamp(0.08, 0.45))
         .toColor();
   }
 
@@ -102,9 +105,9 @@ class CasillaJuego extends StatelessWidget {
     if (esLugarValido) {
       return [
         BoxShadow(
-          color: const Color(0xFF10B981).withValues(alpha: 0.75),
-          blurRadius: 10.0,
-          spreadRadius: 2.0,
+          color: const Color(0xFF34D399).withValues(alpha: 0.9),
+          blurRadius: 12.0,
+          spreadRadius: 2.5,
         ),
       ];
     }
@@ -150,18 +153,14 @@ class CasillaJuego extends StatelessWidget {
                   ),
                 ),
               )
-            : (esLugarValido && valorPreview != null
-                ? FittedBox(
-                    fit: BoxFit.scaleDown,
-                    child: Padding(
-                      padding: EdgeInsets.all(bordeAncho + 2.0),
-                      child: Text(
-                        '$valorPreview',
-                        style: TextStyle(
-                          color: const Color(0xFF047857).withValues(alpha: 0.8),
-                          fontWeight: FontWeight.w900,
-                          fontSize: 28.0,
-                        ),
+            : (esLugarValido
+                ? Container(
+                    margin: const EdgeInsets.all(2.0),
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(4.0),
+                      border: Border.all(
+                        color: Colors.white.withValues(alpha: 0.92),
+                        width: 2.0,
                       ),
                     ),
                   )

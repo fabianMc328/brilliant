@@ -720,5 +720,79 @@ void main() {
         );
       },
     );
+
+    testWidgets(
+      'Abandonar partida tras pérdida definitiva de red cierra sin bloquearse en PopScope',
+      (tester) async {
+        final repo = RepositorioMultijugadorFake();
+        addTearDown(repo.cerrar);
+
+        final bloc = PartidaMultijugadorBloc(
+          repositorio: repo,
+          salaInicial: const EstadoSalaMultijugador(
+            codigoSala: 'K7M4P9',
+            miJugadorId: 'j1',
+            fase: FaseSala.jugandoRondas,
+            nivelId: 'nivel_1',
+            rondaActual: 2,
+            dado1: 2,
+            dado2: 4,
+            jugadores: [
+              ResumenJugador(
+                id: 'j1',
+                apodo: 'Fabian',
+                esAnfitrion: true,
+                estaListo: true,
+                participacion: EstadoParticipacion.conectado,
+              ),
+              ResumenJugador(
+                id: 'j2',
+                apodo: 'Rival',
+                esAnfitrion: false,
+                estaListo: true,
+                participacion: EstadoParticipacion.conectado,
+              ),
+            ],
+          ),
+        );
+        addTearDown(bloc.close);
+
+        await tester.pumpWidget(
+          MaterialApp(
+            home: Builder(
+              builder: (context) => Scaffold(
+                body: ElevatedButton(
+                  key: const Key('abrir_multi_pop'),
+                  onPressed: () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => BlocProvider.value(
+                          value: bloc,
+                          child: const PantallaPartidaMultijugador(),
+                        ),
+                      ),
+                    );
+                  },
+                  child: const Text('Abrir'),
+                ),
+              ),
+            ),
+          ),
+        );
+
+        await tester.tap(find.byKey(const Key('abrir_multi_pop')));
+        await tester.pumpAndSettle();
+
+        repo.emitirEstadoConexion(
+          const EstadoConexionCliente.perdidaDefinitiva('Red caída'),
+        );
+        await tester.pumpAndSettle();
+
+        await tester.tap(find.text('Salir'));
+        await tester.pumpAndSettle();
+
+        expect(find.byKey(const Key('abrir_multi_pop')), findsOneWidget);
+      },
+    );
   });
 }

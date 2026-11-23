@@ -236,7 +236,16 @@ void main() {
       expect(find.byKey(const Key('input_login_usuario')), findsOneWidget);
       expect(find.byKey(const Key('input_login_password')), findsOneWidget);
       expect(find.byKey(const Key('boton_iniciar_sesion')), findsOneWidget);
-      expect(find.text('💡 Cuenta demo: fabian@brilliant.com / contraseña123'), findsOneWidget);
+
+      final campoUsuario = tester.widget<TextFormField>(
+        find.byKey(const Key('input_login_usuario')),
+      );
+      final campoPassword = tester.widget<TextFormField>(
+        find.byKey(const Key('input_login_password')),
+      );
+      expect(campoUsuario.controller?.text, isEmpty);
+      expect(campoPassword.controller?.text, isEmpty);
+      expect(find.textContaining('contraseña123'), findsNothing);
 
       // Validar rechazo visual de espacios en contraseña
       await tester.enterText(find.byKey(const Key('input_login_password')), 'clave 123');

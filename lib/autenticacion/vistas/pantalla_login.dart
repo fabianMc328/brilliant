@@ -21,8 +21,8 @@ class _PantallaLoginState extends State<PantallaLogin>
   final _formKeyRegistro = GlobalKey<FormState>();
 
   // Controladores de Login
-  final _ctrlLoginIdentificador = TextEditingController(text: 'fabian@brilliant.com');
-  final _ctrlLoginPassword = TextEditingController(text: 'contraseña123');
+  final _ctrlLoginIdentificador = TextEditingController();
+  final _ctrlLoginPassword = TextEditingController();
   bool _ocultarLoginPassword = true;
 
   // Controladores de Registro
@@ -394,12 +394,6 @@ class _PantallaLoginState extends State<PantallaLogin>
                     'Entrar a Jugar',
                     style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                   ),
-          ),
-          const SizedBox(height: 10),
-          Text(
-            '💡 Cuenta demo: fabian@brilliant.com / contraseña123',
-            textAlign: TextAlign.center,
-            style: TextStyle(fontSize: 11, color: Colors.blueGrey.shade500),
           ),
         ],
       ),

@@ -208,7 +208,9 @@ class _PantallaPartidaMultijugadorState
     return BlocConsumer<PartidaMultijugadorBloc, PartidaMultijugadorEstado>(
       listener: (context, state) {
         if (state is PartidaMultijugadorCerrada) {
-          Navigator.of(context).maybePop();
+          if (Navigator.of(context).canPop()) {
+            Navigator.of(context).pop();
+          }
         } else if (state is PartidaMultijugadorActiva) {
           _evaluarRegionesCompletadas(state);
         }

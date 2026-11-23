@@ -28,7 +28,7 @@ void main() {
       expect(find.byType(AspectRatio), findsOneWidget);
     });
 
-    testWidgets('Muestra número previo translúcido si se puede colocar ahí', (tester) async {
+    testWidgets('Ilumina casilla válida sin mostrar número flotante', (tester) async {
       await tester.pumpWidget(
         const MaterialApp(
           home: Scaffold(
@@ -47,7 +47,8 @@ void main() {
         ),
       );
 
-      expect(find.text('2'), findsOneWidget);
+      expect(find.text('2'), findsNothing);
+      expect(find.byType(AnimatedContainer), findsOneWidget);
     });
 
     testWidgets('Muestra puntito indicador de ancla elegible', (tester) async {

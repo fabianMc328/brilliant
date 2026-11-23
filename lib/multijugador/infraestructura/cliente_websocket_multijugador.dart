@@ -303,10 +303,7 @@ class ClienteWebsocketMultijugador implements RepositorioMultijugador {
       );
     }
 
-    final timeoutEfectivo =
-        uri.scheme == 'wss' && _timeoutOperacion < const Duration(seconds: 40)
-            ? const Duration(seconds: 40)
-            : _timeoutOperacion;
+    final timeoutEfectivo = _timeoutEfectivoPara(_urlServidor);
 
     WebSocketChannel? canalTentativo;
     try {
@@ -543,7 +540,7 @@ class ClienteWebsocketMultijugador implements RepositorioMultijugador {
 
     try {
       canal.sink.add(jsonEncode(comando.toJson()));
-      return await completer.future.timeout(_timeoutOperacion);
+      return await completer.future.timeout(_timeoutEfectivoPara(_urlServidor));
     } on TimeoutException {
       _solicitudesPendientes.remove(reqId);
       throw const FalloMultijugador(
@@ -621,6 +618,14 @@ class ClienteWebsocketMultijugador implements RepositorioMultijugador {
     if (!_controladorConexion.isClosed) {
       _controladorConexion.add(nuevo);
     }
+  }
+
+  Duration _timeoutEfectivoPara(String url) {
+    final esSeguro = url.trim().toLowerCase().startsWith('wss://');
+    if (esSeguro && _timeoutOperacion < const Duration(seconds: 40)) {
+      return const Duration(seconds: 40);
+    }
+    return _timeoutOperacion;
   }
 
   String _nuevaSolicitudId() {
