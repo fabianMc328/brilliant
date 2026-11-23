@@ -42,7 +42,7 @@ jobs:
 
       - name: Compilar APK Release
         run: |
-          flutter build apk --release
+          flutter build apk --release || flutter build apk --release
           cp build/app/outputs/flutter-apk/app-release.apk build/app/outputs/flutter-apk/brilliant.apk
 
       - name: Publicar en GitHub Releases (latest)
