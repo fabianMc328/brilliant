@@ -10,6 +10,7 @@ class MiniaturaMapaMultijugador extends StatelessWidget {
   final double tamano;
   final bool mostrarEstrellas;
   final String? regionResaltadaId;
+  final Set<String>? regionesResaltadasIds;
 
   const MiniaturaMapaMultijugador({
     super.key,
@@ -18,6 +19,7 @@ class MiniaturaMapaMultijugador extends StatelessWidget {
     this.tamano = 56,
     this.mostrarEstrellas = true,
     this.regionResaltadaId,
+    this.regionesResaltadasIds,
   });
 
   @override
@@ -50,8 +52,12 @@ class MiniaturaMapaMultijugador extends StatelessWidget {
           final celda = tableroActivo.celdas[coord];
           final region = celda?.region;
           final colorBase = region?.tipo.color ?? Colors.grey;
-          final estaResaltada = regionResaltadaId == null ||
-              region?.id == regionResaltadaId;
+          final tieneFiltro = regionResaltadaId != null ||
+              (regionesResaltadasIds != null &&
+                  regionesResaltadasIds!.isNotEmpty);
+          final estaResaltada = !tieneFiltro ||
+              region?.id == regionResaltadaId ||
+              (regionesResaltadasIds?.contains(region?.id) ?? false);
           final color =
               estaResaltada ? colorBase : Colors.grey.shade300;
           final esEstrella = mostrarEstrellas && estrellas.contains(coord);
@@ -60,7 +66,7 @@ class MiniaturaMapaMultijugador extends StatelessWidget {
             decoration: BoxDecoration(
               color: color,
               borderRadius: BorderRadius.circular(2.0),
-              border: regionResaltadaId != null && estaResaltada
+              border: tieneFiltro && estaResaltada
                   ? Border.all(color: const Color(0xFF0F172A), width: 1.1)
                   : null,
             ),

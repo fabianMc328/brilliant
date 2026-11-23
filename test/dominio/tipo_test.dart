@@ -30,7 +30,7 @@ void main() {
 
     test('TipoAmarillo tiene su color y puntos (8, 6, 4)', () {
       final tipo = TipoAmarillo();
-      expect(tipo.color, const Color(0xFFFFC107));
+      expect(tipo.color, const Color(0xFFFACC15));
       expect(tipo.puntuaciones, {1: 8, 2: 6, 3: 4});
       expect(tipo.esPosibleAgregar([1, 2], 3), isTrue);
       expect(tipo.esPosibleAgregar([1, 2], 2), isFalse);
@@ -38,7 +38,7 @@ void main() {
 
     test('TipoRojo tiene su color y puntos (8, 6, 4)', () {
       final tipo = TipoRojo();
-      expect(tipo.color, const Color(0xFFF44336));
+      expect(tipo.color, const Color(0xFFD50000));
       expect(tipo.puntuaciones, {1: 8, 2: 6, 3: 4});
       expect(tipo.esPosibleAgregar([5], 6), isTrue);
       expect(tipo.esPosibleAgregar([5], 5), isFalse);
@@ -54,7 +54,7 @@ void main() {
 
     test('TipoNaranja1a3 valida rango 1 a 3 y puntos (6, 4, 3)', () {
       final tipo = TipoNaranja1a3();
-      expect(tipo.color, const Color(0xFFF97316));
+      expect(tipo.color, const Color(0xFFFF9100));
       expect(tipo.puntuaciones, {1: 6, 2: 4, 3: 3});
       expect(tipo.esPosibleAgregar([], 2), isTrue);
       expect(tipo.esPosibleAgregar([], 4), isFalse);
@@ -62,7 +62,7 @@ void main() {
 
     test('TipoNaranja4a6 valida rango 4 a 6 y puntos (6, 4, 3)', () {
       final tipo = TipoNaranja4a6();
-      expect(tipo.color, const Color(0xFFEA580C));
+      expect(tipo.color, const Color(0xFFF57C00));
       expect(tipo.puntuaciones, {1: 6, 2: 4, 3: 3});
       expect(tipo.esPosibleAgregar([], 5), isTrue);
       expect(tipo.esPosibleAgregar([], 2), isFalse);

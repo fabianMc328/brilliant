@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import '../juego_estado.dart';
+import '../multijugador/widgets/miniatura_mapa_multijugador.dart';
+import '../region.dart';
 import '../tipo.dart';
 
 // Muestra puntos, turno y avance de cada color.
@@ -23,6 +25,198 @@ class PanelPuntuacion extends StatelessWidget {
     return 'Zona';
   }
 
+  void _mostrarDetalleColor(
+    BuildContext context,
+    Tipo tipoInstancia,
+    String label,
+    Type tipoRuntime,
+    int completadas,
+    int total,
+  ) {
+    final color = tipoInstancia.color;
+    final regionesDelTipo = state.tablero.regiones
+        .where((r) => r.tipo.runtimeType == tipoRuntime)
+        .toList();
+    final idsRegiones = regionesDelTipo.map((r) => r.id).toSet();
+
+    int totalCasillas = 0;
+    int casillasLlenas = 0;
+    for (final r in regionesDelTipo) {
+      totalCasillas += r.coordenadas.length;
+      for (final c in r.coordenadas) {
+        if (state.tablero.celdas[c]?.estaVacia == false) {
+          casillasLlenas += 1;
+        }
+      }
+    }
+
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (_) => SafeArea(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    width: 32,
+                    height: 32,
+                    decoration: BoxDecoration(
+                      color: color,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Zona $label',
+                          style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w900,
+                          ),
+                        ),
+                        Text(
+                          '$casillasLlenas/$totalCasillas casillas llenas • $completadas/$total regiones completas',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.blueGrey.shade600,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 14),
+              Center(
+                child: Column(
+                  children: [
+                    MiniaturaMapaMultijugador(
+                      key: Key('miniatura_color_solitario_${label.toLowerCase()}'),
+                      nivel: state.nivel,
+                      tablero: state.tablero,
+                      regionesResaltadasIds: idsRegiones,
+                      tamano: 128,
+                      mostrarEstrellas: false,
+                    ),
+                    const SizedBox(height: 5),
+                    Text(
+                      'Ubicación de $label en el mapa',
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w700,
+                        color: Colors.blueGrey.shade600,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 12),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: color.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: color.withValues(alpha: 0.4)),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Regla: ${tipoInstancia.descripcion}',
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w800,
+                        color: Colors.blueGrey.shade900,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'Resumen: ${tipoInstancia.reglaCorta}',
+                      style: TextStyle(
+                        fontSize: 11.5,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.blueGrey.shade700,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 14),
+              const Text(
+                'Regiones de este color:',
+                style: TextStyle(fontSize: 13, fontWeight: FontWeight.w800),
+              ),
+              const SizedBox(height: 6),
+              ...regionesDelTipo.map((Region r) {
+                final completa = state.tablero.esRegionCompleta(r);
+                final llenasR = r.coordenadas
+                    .where((c) => state.tablero.celdas[c]?.estaVacia == false)
+                    .length;
+                final pts = r.tipo.puntuaciones[1] ?? 0;
+                return Container(
+                  margin: const EdgeInsets.only(bottom: 6),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 8,
+                  ),
+                  decoration: BoxDecoration(
+                    color: completa
+                        ? const Color(0xFFD1FAE5)
+                        : Colors.blueGrey.shade50,
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(
+                      color: completa
+                          ? const Color(0xFF34D399)
+                          : Colors.blueGrey.shade200,
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          '${r.id.replaceAll('_', ' ')} ($llenasR/${r.coordenadas.length})',
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w800,
+                            color: completa
+                                ? const Color(0xFF065F46)
+                                : const Color(0xFF0F172A),
+                          ),
+                        ),
+                      ),
+                      Text(
+                        completa ? '+$pts pts ✓' : '$pts pts al completar',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w800,
+                          color: completa
+                              ? const Color(0xFF065F46)
+                              : Colors.blueGrey.shade700,
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              }),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _construirChipProgreso(
     BuildContext context,
     Tipo tipoInstancia,
@@ -38,62 +232,13 @@ class PanelPuntuacion extends StatelessWidget {
 
     return InkWell(
       borderRadius: BorderRadius.circular(8),
-      onTap: () => showDialog<void>(
-        context: context,
-        builder: (ctx) => AlertDialog(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(18),
-          ),
-          title: Row(
-            children: [
-              Container(
-                width: 14,
-                height: 14,
-                decoration: BoxDecoration(color: color, shape: BoxShape.circle),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  'Región $label',
-                  style: const TextStyle(fontWeight: FontWeight.w800),
-                ),
-              ),
-            ],
-          ),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Regla: ${tipoInstancia.reglaCorta}',
-                style: const TextStyle(
-                  fontWeight: FontWeight.w800,
-                  fontSize: 14,
-                ),
-              ),
-              const SizedBox(height: 6),
-              Text(
-                tipoInstancia.descripcion,
-                style: const TextStyle(fontSize: 13.5),
-              ),
-              const SizedBox(height: 10),
-              Text(
-                'Puntos al completar: ${tipoInstancia.puntuaciones[1] ?? 0} pts ($completadas/$total completadas)',
-                style: const TextStyle(
-                  fontSize: 12.5,
-                  fontWeight: FontWeight.w600,
-                  color: Colors.black54,
-                ),
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(ctx).pop(),
-              child: const Text('Cerrar'),
-            ),
-          ],
-        ),
+      onTap: () => _mostrarDetalleColor(
+        context,
+        tipoInstancia,
+        label,
+        tipo,
+        completadas,
+        total,
       ),
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),

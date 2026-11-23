@@ -49,6 +49,15 @@ void main() {
 
       expect(textoPuntos.data, '25 pts');
       expect(textoTurno.data, 'Turno 5');
+
+      // Al pulsar un color en Solitario abre el panel visual de regla + mini-mapa
+      await tester.tap(find.text('Azul: 0/2'));
+      await tester.pumpAndSettle();
+      expect(
+        find.byKey(const Key('miniatura_color_solitario_azul')),
+        findsOneWidget,
+      );
+      expect(find.text('Ubicación de Azul en el mapa'), findsOneWidget);
     });
 
     testWidgets('Funciona el botón de tirar dados y el de pasar turno', (tester) async {

@@ -115,7 +115,7 @@ class TipoAmarillo extends Tipo {
       : _puntuaciones = puntuaciones ?? const {1: 8, 2: 6, 3: 4};
 
   @override
-  Color get color => const Color(0xFFFFC107);
+  Color get color => const Color(0xFFFACC15);
 
   @override
   String get descripcion => 'Todos los números deben de ser distintos';
@@ -139,7 +139,7 @@ class TipoRojo extends Tipo {
       : _puntuaciones = puntuaciones ?? const {1: 8, 2: 6, 3: 4};
 
   @override
-  Color get color => const Color(0xFFF44336);
+  Color get color => const Color(0xFFD50000);
 
   @override
   String get descripcion => 'Todos los números deben de ser distintos';
@@ -163,7 +163,7 @@ class TipoNaranja1a3 extends Tipo {
       : _puntuaciones = puntuaciones ?? const {1: 6, 2: 4, 3: 3};
 
   @override
-  Color get color => const Color(0xFFF97316);
+  Color get color => const Color(0xFFFF9100);
 
   @override
   String get descripcion => 'Solo números del 1 al 3';
@@ -187,7 +187,7 @@ class TipoNaranja4a6 extends Tipo {
       : _puntuaciones = puntuaciones ?? const {1: 6, 2: 4, 3: 3};
 
   @override
-  Color get color => const Color(0xFFEA580C);
+  Color get color => const Color(0xFFF57C00);
 
   @override
   String get descripcion => 'Solo números del 4 al 6';

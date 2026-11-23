@@ -392,8 +392,38 @@ class PartidaMultijugadorBloc
     final actual = state as PartidaMultijugadorActiva;
     try {
       await _repositorio.concederPartida();
+      // Actualización optimista local para destrabar salida/espectador inmediatamente sin esperar red
+      final jugadoresActualizados = actual.sala.jugadores.map((j) {
+        if (j.id == actual.sala.miJugadorId) {
+          return j.copiarCon(
+            participacion: EstadoParticipacion.concedido,
+            confirmoAccionActual: true,
+          );
+        }
+        return j;
+      }).toList();
+      final salaActualizada = EstadoSalaMultijugador(
+        codigoSala: actual.sala.codigoSala,
+        miJugadorId: actual.sala.miJugadorId,
+        fase: actual.sala.fase,
+        nivelId: actual.sala.nivelId,
+        jugadores: jugadoresActualizados,
+        rondaActual: actual.sala.rondaActual,
+        dado1: actual.sala.dado1,
+        dado2: actual.sala.dado2,
+        esperandoTiroDados: actual.sala.esperandoTiroDados,
+        segundosRestantes: actual.sala.segundosRestantes,
+        metaPuntos: actual.sala.metaPuntos,
+        misValoresTablero: actual.sala.misValoresTablero,
+        miDesglosePuntos: actual.sala.miDesglosePuntos,
+        carreraPorRegion: actual.sala.carreraPorRegion,
+        ganadoresIds: actual.sala.ganadoresIds,
+        motivoFin: actual.sala.motivoFin,
+        mensajeEventoReciente: actual.sala.mensajeEventoReciente,
+      );
       emit(
         actual.copiarCon(
+          sala: salaActualizada,
           limpiarAncla: true,
           limpiarDadoSeleccionado: true,
           limpiarNumero: true,

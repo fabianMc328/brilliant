@@ -163,6 +163,14 @@ class CasillaJuego extends StatelessWidget {
                         width: 2.0,
                       ),
                     ),
+                    alignment: Alignment.center,
+                    child: Icon(
+                      Icons.add_rounded,
+                      size: 26.0,
+                      color: fondo.computeLuminance() > 0.55
+                          ? const Color(0xFF065F46)
+                          : Colors.white,
+                    ),
                   )
                 : (tieneEstrella
                     ? const Icon(
