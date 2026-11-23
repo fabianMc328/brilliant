@@ -22,7 +22,12 @@ class AuthBloc extends Bloc<AuthEvento, AuthEstado> {
     ComprobarSesionInicial event,
     Emitter<AuthEstado> emit,
   ) async {
-    emit(const AuthCargando(mensaje: 'Comprobando sesión...'));
+    emit(
+      const AuthCargando(
+        mensaje: 'Comprobando sesión...',
+        esComprobacionInicial: true,
+      ),
+    );
     try {
       final usuario = await _repositorio.obtenerUsuarioSesion();
       if (usuario != null) {
@@ -30,6 +35,8 @@ class AuthBloc extends Bloc<AuthEvento, AuthEstado> {
       } else {
         emit(const AuthNoAutenticado());
       }
+    } on FalloAutenticacion catch (e) {
+      emit(AuthNoAutenticado(mensajeError: e.mensaje));
     } catch (_) {
       emit(const AuthNoAutenticado());
     }

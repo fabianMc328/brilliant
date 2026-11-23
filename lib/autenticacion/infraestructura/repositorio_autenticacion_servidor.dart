@@ -13,7 +13,8 @@ import '../dominio/validador_auth.dart';
 import 'cliente_http_auth.dart';
 
 /// Autenticación real contra `servidorBrilliant` (Render o LAN), con bloqueo
-/// de doble sesión activa, latido de sesión y apodo único por cuenta.
+/// de doble sesión activa (entre dispositivos y entre pestañas), latido de sesión
+/// y apodo único por cuenta.
 class RepositorioAutenticacionServidor implements RepositorioAutenticacion {
   static const String _claveUsuarioSesion = 'brilliant_auth_usuario_srv_v1';
   static const String _claveTokenSesion = 'brilliant_auth_token_srv_v1';
@@ -26,13 +27,15 @@ class RepositorioAutenticacionServidor implements RepositorioAutenticacion {
   final Duration? _timeoutPeticion;
   final Duration _intervaloHeartbeat;
   Timer? _timerHeartbeat;
+  String? _tokenActivoEnMemoria;
+  Usuario? _usuarioActivoEnMemoria;
 
   RepositorioAutenticacionServidor({
     SharedPreferences? preferences,
     Future<String?> Function()? resolverUrlServidor,
     ClienteHttpAuth clienteHttp = const ClienteHttpAuth(),
     Duration? timeoutPeticion,
-    Duration intervaloHeartbeat = const Duration(seconds: 25),
+    Duration intervaloHeartbeat = const Duration(seconds: 20),
   })  : _prefsInyectadas = preferences,
         _resolverUrlServidor = resolverUrlServidor,
         _clienteHttp = clienteHttp,
@@ -54,6 +57,11 @@ class RepositorioAutenticacionServidor implements RepositorioAutenticacion {
   }
 
   Future<String> _obtenerOCrearDispositivoId() async {
+    final idPestanaWeb = ClienteHttpAuth.obtenerIdInstanciaNavegador();
+    if (idPestanaWeb != null && idPestanaWeb.isNotEmpty) {
+      return idPestanaWeb;
+    }
+
     final prefs = await _obtenerPrefs();
     final existente = prefs.getString(_claveDispositivoId)?.trim();
     if (existente != null && existente.isNotEmpty) {
@@ -107,6 +115,8 @@ class RepositorioAutenticacionServidor implements RepositorioAutenticacion {
   }
 
   Future<void> _guardarSesion(Usuario usuario, String token) async {
+    _usuarioActivoEnMemoria = usuario;
+    _tokenActivoEnMemoria = token;
     final prefs = await _obtenerPrefs();
     await prefs.setString(_claveUsuarioSesion, jsonEncode(usuario.toJson()));
     await prefs.setString(_claveTokenSesion, token);
@@ -119,28 +129,34 @@ class RepositorioAutenticacionServidor implements RepositorioAutenticacion {
 
     _timerHeartbeat = Timer.periodic(_intervaloHeartbeat, (_) async {
       try {
-        final prefs = await _obtenerPrefs();
-        final tokenActual = prefs.getString(_claveTokenSesion);
+        final tokenActual = _tokenActivoEnMemoria;
         if (tokenActual == null || tokenActual != token) {
           _timerHeartbeat?.cancel();
           return;
         }
+        final prefs = await _obtenerPrefs();
         final urlServidor = _resolverUrlServidor != null
             ? await _resolverUrlServidor!()
             : prefs.getString(_claveUrlServidor);
         if (urlServidor == null || urlServidor.trim().isEmpty) return;
 
+        final dispId = await _obtenerOCrearDispositivoId();
         final res = await _clienteHttp.enviar(
           metodo: 'GET',
           urlWsOBaseHttp: urlServidor,
-          ruta: '/auth/sesion',
+          ruta:
+              '/auth/sesion?dispositivoId=${Uri.encodeQueryComponent(dispId)}',
           bearerToken: tokenActual,
           timeout: const Duration(seconds: 6),
         );
         if (res.statusCode == 401 || res.statusCode == 403) {
           _timerHeartbeat?.cancel();
-          await prefs.remove(_claveUsuarioSesion);
-          await prefs.remove(_claveTokenSesion);
+          _tokenActivoEnMemoria = null;
+          _usuarioActivoEnMemoria = null;
+          if (prefs.getString(_claveTokenSesion) == tokenActual) {
+            await prefs.remove(_claveUsuarioSesion);
+            await prefs.remove(_claveTokenSesion);
+          }
         }
       } catch (_) {}
     });
@@ -150,7 +166,7 @@ class RepositorioAutenticacionServidor implements RepositorioAutenticacion {
   Future<Usuario?> obtenerUsuarioSesion() async {
     final prefs = await _obtenerPrefs();
     final rawJson = prefs.getString(_claveUsuarioSesion);
-    final token = prefs.getString(_claveTokenSesion);
+    final token = _tokenActivoEnMemoria ?? prefs.getString(_claveTokenSesion);
     if (rawJson == null ||
         rawJson.trim().isEmpty ||
         token == null ||
@@ -161,52 +177,63 @@ class RepositorioAutenticacionServidor implements RepositorioAutenticacion {
     Usuario usuarioLocal;
     try {
       final decoded = jsonDecode(rawJson) as Map<String, dynamic>;
-      usuarioLocal = Usuario.fromJson(decoded);
+      usuarioLocal = _usuarioActivoEnMemoria ?? Usuario.fromJson(decoded);
     } catch (_) {
       await prefs.remove(_claveUsuarioSesion);
       await prefs.remove(_claveTokenSesion);
       return null;
     }
 
+    RespuestaHttpAuth respuesta;
     try {
       final urlServidor = await _obtenerUrlServidorActiva();
-      final respuesta = await _clienteHttp.enviar(
+      final dispId = await _obtenerOCrearDispositivoId();
+      respuesta = await _clienteHttp.enviar(
         metodo: 'GET',
         urlWsOBaseHttp: urlServidor,
-        ruta: '/auth/sesion',
+        ruta: '/auth/sesion?dispositivoId=${Uri.encodeQueryComponent(dispId)}',
         bearerToken: token,
         timeout: _timeoutPeticion,
       );
-
-      if (respuesta.statusCode == 200) {
-        final rawRemoto = respuesta.datos['usuario'];
-        if (rawRemoto is Map<String, dynamic>) {
-          final actualizado = Usuario.fromJson(rawRemoto);
-          await prefs.setString(
-            _claveUsuarioSesion,
-            jsonEncode(actualizado.toJson()),
-          );
-          _iniciarHeartbeat(token);
-          return actualizado;
-        }
-        _iniciarHeartbeat(token);
-        return usuarioLocal;
-      }
-
-      if (respuesta.statusCode == 401 ||
-          respuesta.statusCode == 403 ||
-          respuesta.statusCode == 409) {
-        _timerHeartbeat?.cancel();
-        await prefs.remove(_claveUsuarioSesion);
-        await prefs.remove(_claveTokenSesion);
-        return null;
-      }
     } catch (_) {
-      // Si no hay conexión con el servidor al iniciar, exige autenticarse al reconectar.
       return null;
     }
 
-    return usuarioLocal;
+    if (respuesta.statusCode == 200) {
+      final rawRemoto = respuesta.datos['usuario'];
+      final verificado = rawRemoto is Map<String, dynamic>
+          ? Usuario.fromJson(rawRemoto)
+          : usuarioLocal;
+      _usuarioActivoEnMemoria = verificado;
+      _tokenActivoEnMemoria = token;
+      await prefs.setString(
+        _claveUsuarioSesion,
+        jsonEncode(verificado.toJson()),
+      );
+      _iniciarHeartbeat(token);
+      return verificado;
+    }
+
+    if (respuesta.statusCode == 409) {
+      // La sesión pertenece a otra pestaña o dispositivo activo: no borrar el token de la otra pestaña,
+      // pero impedir que esta nueva pestaña entre automáticamente y avisar al usuario.
+      _timerHeartbeat?.cancel();
+      _tokenActivoEnMemoria = null;
+      _usuarioActivoEnMemoria = null;
+      final mensaje = (respuesta.datos['error'] as String?)?.trim();
+      throw FalloAutenticacion(
+        (mensaje != null && mensaje.isNotEmpty)
+            ? mensaje
+            : 'Ya hay una cuenta conectada en otra pestaña o dispositivo. Inicia sesión con otra cuenta.',
+      );
+    }
+
+    _timerHeartbeat?.cancel();
+    _tokenActivoEnMemoria = null;
+    _usuarioActivoEnMemoria = null;
+    await prefs.remove(_claveUsuarioSesion);
+    await prefs.remove(_claveTokenSesion);
+    return null;
   }
 
   @override
@@ -317,7 +344,9 @@ class RepositorioAutenticacionServidor implements RepositorioAutenticacion {
     _timerHeartbeat = null;
 
     final prefs = await _obtenerPrefs();
-    final token = prefs.getString(_claveTokenSesion);
+    final token = _tokenActivoEnMemoria ?? prefs.getString(_claveTokenSesion);
+    _tokenActivoEnMemoria = null;
+    _usuarioActivoEnMemoria = null;
 
     if (token != null && token.isNotEmpty) {
       try {
@@ -336,7 +365,9 @@ class RepositorioAutenticacionServidor implements RepositorioAutenticacion {
       } catch (_) {}
     }
 
-    await prefs.remove(_claveUsuarioSesion);
-    await prefs.remove(_claveTokenSesion);
+    if (prefs.getString(_claveTokenSesion) == token) {
+      await prefs.remove(_claveUsuarioSesion);
+      await prefs.remove(_claveTokenSesion);
+    }
   }
 }

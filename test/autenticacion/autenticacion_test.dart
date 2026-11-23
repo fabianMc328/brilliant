@@ -12,6 +12,7 @@ import 'package:brilliant/autenticacion/infraestructura/cliente_http_auth.dart';
 import 'package:brilliant/autenticacion/infraestructura/repositorio_autenticacion_local.dart';
 import 'package:brilliant/autenticacion/infraestructura/repositorio_autenticacion_servidor.dart';
 import 'package:brilliant/autenticacion/vistas/pantalla_login.dart';
+import 'package:brilliant/main.dart';
 
 class _ClienteHttpAuthSimulado extends ClienteHttpAuth {
   final Map<String, Map<String, dynamic>> _porApodo = {};
@@ -124,12 +125,28 @@ class _ClienteHttpAuthSimulado extends ClienteHttpAuth {
       );
     }
 
-    if (ruta == '/auth/sesion' && metodo == 'GET') {
+    if (ruta.startsWith('/auth/sesion') && metodo == 'GET') {
       final uid = bearerToken == null ? null : _usuarioPorToken[bearerToken];
       if (uid == null) {
         return const RespuestaHttpAuth(
           statusCode: 401,
           datos: {'error': 'Sesión expirada o no válida.'},
+        );
+      }
+      final uriRuta = Uri.parse(ruta);
+      final dispQuery = uriRuta.queryParameters['dispositivoId']?.trim();
+      final dispDueno = _dispositivoPorUsuario[uid];
+      if (dispQuery != null &&
+          dispQuery.isNotEmpty &&
+          dispDueno != null &&
+          dispDueno != dispQuery) {
+        return const RespuestaHttpAuth(
+          statusCode: 409,
+          datos: {
+            'error':
+                'La cuenta ya está conectada en otra pestaña o dispositivo.',
+            'codigo': 'SESION_YA_ACTIVA',
+          },
         );
       }
       final found = _porApodo.values.firstWhere((u) => u['id'] == uid);
@@ -536,6 +553,61 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.textContaining('ya está en uso'), findsOneWidget);
+    });
+
+    testWidgets('AplicacionBrilliant mantiene PantallaLogin montada ante error de cuenta ya conectada o duplicada', (tester) async {
+      final cliente = _ClienteHttpAuthSimulado();
+      const urlServidor = 'wss://servidorbrilliant.onrender.com';
+
+      SharedPreferences.setMockInitialValues({
+        'brilliant_dispositivo_id_v1': 'disp_1',
+      });
+      final prefs1 = await SharedPreferences.getInstance();
+      final repo1 = RepositorioAutenticacionServidor(
+        preferences: prefs1,
+        resolverUrlServidor: () async => urlServidor,
+        clienteHttp: cliente,
+      );
+      await repo1.registrarUsuario(
+        apodo: 'Fabian',
+        email: 'fabian@brilliant.com',
+        contrasena: 'contraseña123',
+      );
+
+      // Segundo dispositivo intenta entrar con la cuenta que ya está conectada en disp_1
+      SharedPreferences.setMockInitialValues({
+        'brilliant_dispositivo_id_v1': 'disp_2',
+      });
+      final prefs2 = await SharedPreferences.getInstance();
+      final repo2 = RepositorioAutenticacionServidor(
+        preferences: prefs2,
+        resolverUrlServidor: () async => urlServidor,
+        clienteHttp: cliente,
+      );
+
+      await tester.pumpWidget(AplicacionBrilliant(repositorioAuth: repo2));
+      await tester.pumpAndSettle();
+
+      await tester.enterText(
+        find.byKey(const Key('input_login_usuario')),
+        'Fabian',
+      );
+      await tester.enterText(
+        find.byKey(const Key('input_login_password')),
+        'contraseña123',
+      );
+      await tester.tap(find.byKey(const Key('boton_iniciar_sesion')));
+      await tester.pumpAndSettle();
+
+      // No lo deja entrar, muestra el error y conserva el texto escrito en PantallaLogin
+      expect(
+        find.textContaining('ya está conectada en otro dispositivo'),
+        findsOneWidget,
+      );
+      final campoUsuario = tester.widget<TextFormField>(
+        find.byKey(const Key('input_login_usuario')),
+      );
+      expect(campoUsuario.controller?.text, 'Fabian');
     });
   });
 }

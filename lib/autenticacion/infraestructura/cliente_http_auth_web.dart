@@ -1,10 +1,33 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:js_interop';
+import 'dart:math';
 
 import 'package:web/web.dart' as web;
 
 import 'cliente_http_auth.dart';
+
+const String _claveSessionStorageTab = 'brilliant_tab_instancia_id_v1';
+
+/// Devuelve un ID único por pestaña del navegador usando `window.sessionStorage`.
+String? obtenerIdInstanciaNavegadorImpl() {
+  try {
+    final existente = web.window.sessionStorage.getItem(_claveSessionStorageTab);
+    if (existente != null && existente.trim().isNotEmpty) {
+      return existente.trim();
+    }
+    final rnd = Random();
+    final buffer = StringBuffer('tab_');
+    for (int i = 0; i < 16; i++) {
+      buffer.write(rnd.nextInt(256).toRadixString(16).padLeft(2, '0'));
+    }
+    final nuevo = buffer.toString();
+    web.window.sessionStorage.setItem(_claveSessionStorageTab, nuevo);
+    return nuevo;
+  } catch (_) {
+    return null;
+  }
+}
 
 /// Implementación para Flutter Web mediante `window.fetch` contra `servidorBrilliant`.
 Future<RespuestaHttpAuth> enviarHttpAuthImpl({

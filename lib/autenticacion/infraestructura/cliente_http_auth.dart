@@ -1,18 +1,21 @@
 import 'cliente_http_auth_web.dart'
     if (dart.library.io) 'cliente_http_auth_io.dart' as impl;
 
-/// Construye la URI HTTP/HTTPS equivalente a partir de una URL `ws://`, `wss://`, `http://` o `https://`.
+/// Construye la URI HTTP/HTTPS equivalente a partir de una URL `ws://`, `wss://`, `http://` o `https://`,
+/// preservando cualquier query string presente en [ruta] (ej. `/auth/sesion?dispositivoId=...`).
 Uri construirUriHttpAuth(String urlWsOBaseHttp, String ruta) {
   final uriBase = Uri.parse(urlWsOBaseHttp.trim());
   final esSeguro = uriBase.scheme == 'wss' || uriBase.scheme == 'https';
   final scheme = esSeguro ? 'https' : 'http';
   final rutaNormalizada = ruta.startsWith('/') ? ruta : '/$ruta';
+  final uriRuta = Uri.parse(rutaNormalizada);
 
   return Uri(
     scheme: scheme,
     host: uriBase.host,
     port: uriBase.hasPort ? uriBase.port : null,
-    path: rutaNormalizada,
+    path: uriRuta.path,
+    query: uriRuta.hasQuery ? uriRuta.query : null,
   );
 }
 
@@ -37,6 +40,12 @@ class RespuestaHttpAuth {
 /// Cliente HTTP multiplataforma (IO nativo y Web `fetch`) para `/auth/*` y `/salud`.
 class ClienteHttpAuth {
   const ClienteHttpAuth();
+
+  /// En Web devuelve un ID único por pestaña (`sessionStorage`) que sobrevive a F5
+  /// en la misma pestaña pero es distinto al abrir una pestaña nueva. En IO devuelve `null`.
+  static String? obtenerIdInstanciaNavegador() {
+    return impl.obtenerIdInstanciaNavegadorImpl();
+  }
 
   Future<RespuestaHttpAuth> enviar({
     required String metodo,

@@ -11,7 +11,12 @@ class AuthInicial extends AuthEstado {
 
 class AuthCargando extends AuthEstado {
   final String? mensaje;
-  const AuthCargando({this.mensaje});
+  final bool esComprobacionInicial;
+
+  const AuthCargando({
+    this.mensaje,
+    this.esComprobacionInicial = false,
+  });
 }
 
 class AuthNoAutenticado extends AuthEstado {
@@ -30,7 +35,7 @@ class AuthNoAutenticado extends AuthEstado {
   }) {
     return AuthNoAutenticado(
       mensajeError: limpiarError ? null : (mensajeError ?? this.mensajeError),
-      mensajeExito: mensajeExito ?? this.mensajeExito,
+      mensajeExito: limpiarError ? null : (mensajeExito ?? this.mensajeExito),
     );
   }
 }

@@ -61,7 +61,9 @@ class _EnrutadorRaizAuth extends StatelessWidget {
         if (state is AuthAutenticado) {
           return PantallaInicioModo(usuarioAutenticado: state.usuario);
         }
-        if (state is AuthCargando && state.mensaje != null) {
+        if (state is AuthCargando &&
+            state.esComprobacionInicial &&
+            state.mensaje != null) {
           return Scaffold(
             body: Center(
               child: Column(

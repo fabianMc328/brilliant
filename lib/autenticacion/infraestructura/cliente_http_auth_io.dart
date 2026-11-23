@@ -3,6 +3,8 @@ import 'dart:io';
 
 import 'cliente_http_auth.dart';
 
+String? obtenerIdInstanciaNavegadorImpl() => null;
+
 /// Implementación nativa (`dart:io`) de peticiones HTTP de autenticación.
 Future<RespuestaHttpAuth> enviarHttpAuthImpl({
   required String metodo,

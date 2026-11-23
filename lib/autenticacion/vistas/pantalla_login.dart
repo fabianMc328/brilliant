@@ -38,6 +38,41 @@ class _PantallaLoginState extends State<PantallaLogin>
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final estado = context.read<AuthBloc>().state;
+      if (estado is AuthNoAutenticado) {
+        _mostrarMensajeEstado(estado);
+      }
+    });
+  }
+
+  void _mostrarMensajeEstado(AuthNoAutenticado state) {
+    final messenger = ScaffoldMessenger.maybeOf(context);
+    if (messenger == null) return;
+    if (state.mensajeError != null && state.mensajeError!.isNotEmpty) {
+      messenger
+        ..hideCurrentSnackBar()
+        ..showSnackBar(
+          SnackBar(
+            content: Text(state.mensajeError!),
+            backgroundColor: const Color(0xFFDC2626),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      context.read<AuthBloc>().add(const LimpiarErrorAuth());
+    } else if (state.mensajeExito != null && state.mensajeExito!.isNotEmpty) {
+      messenger
+        ..hideCurrentSnackBar()
+        ..showSnackBar(
+          SnackBar(
+            content: Text(state.mensajeExito!),
+            backgroundColor: const Color(0xFF059669),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      context.read<AuthBloc>().add(const LimpiarErrorAuth());
+    }
   }
 
   @override
@@ -108,22 +143,8 @@ class _PantallaLoginState extends State<PantallaLogin>
       body: SafeArea(
         child: BlocConsumer<AuthBloc, AuthEstado>(
           listener: (context, state) {
-            if (state is AuthNoAutenticado && state.mensajeError != null) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text(state.mensajeError!),
-                  backgroundColor: const Color(0xFFDC2626),
-                  behavior: SnackBarBehavior.floating,
-                ),
-              );
-            } else if (state is AuthNoAutenticado && state.mensajeExito != null) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text(state.mensajeExito!),
-                  backgroundColor: const Color(0xFF059669),
-                  behavior: SnackBarBehavior.floating,
-                ),
-              );
+            if (state is AuthNoAutenticado) {
+              _mostrarMensajeEstado(state);
             }
           },
           builder: (context, state) {
