@@ -334,6 +334,8 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.byKey(Key('lista_completados_$regionId')), findsOneWidget);
+      expect(find.textContaining('Regla: '), findsOneWidget);
+      expect(find.textContaining('Resumen:'), findsNothing);
       expect(find.text('1.º Lugar'), findsWidgets);
       expect(find.text('Jugador2'), findsWidgets);
 

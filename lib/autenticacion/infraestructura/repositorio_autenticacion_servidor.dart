@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../multijugador/infraestructura/descubridor_servidor_local.dart';
@@ -50,10 +51,13 @@ class RepositorioAutenticacionServidor implements RepositorioAutenticacion {
     final prefs = await _obtenerPrefs();
     final guardada = prefs.getString(_claveUrlServidor)?.trim();
     if (guardada != null && guardada.isNotEmpty) {
-      final activa =
-          await DescubridorServidorLocal.verificarServidorActivo(guardada);
-      if (activa) {
-        return guardada;
+      final permitida = !kIsWeb || guardada.startsWith('wss://');
+      if (permitida) {
+        final activa =
+            await DescubridorServidorLocal.verificarServidorActivo(guardada);
+        if (activa) {
+          return guardada;
+        }
       }
     }
 

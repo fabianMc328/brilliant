@@ -58,6 +58,8 @@ void main() {
         findsOneWidget,
       );
       expect(find.text('Ubicación de Azul en el mapa'), findsOneWidget);
+      expect(find.textContaining('Regla: '), findsOneWidget);
+      expect(find.textContaining('Resumen:'), findsNothing);
     });
 
     testWidgets('Funciona el botón de tirar dados y el de pasar turno', (tester) async {

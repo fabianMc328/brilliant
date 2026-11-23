@@ -12,20 +12,8 @@ Future<RespuestaHttpAuth> enviarHttpAuthImpl({
   String? bearerToken,
   Duration? timeout,
 }) async {
-  final uriBase = Uri.parse(urlWsOBaseHttp.trim());
-  final esSeguro = uriBase.scheme == 'wss' || uriBase.scheme == 'https';
-  final scheme = esSeguro ? 'https' : 'http';
-  final rutaNormalizada = ruta.startsWith('/') ? ruta : '/$ruta';
-
-  final uriFinal = Uri(
-    scheme: scheme,
-    host: uriBase.host,
-    port: uriBase.hasPort ? uriBase.port : (esSeguro ? 443 : 80),
-    path: rutaNormalizada,
-  );
-
-  final timeoutEfectivo = timeout ??
-      (esSeguro ? const Duration(seconds: 40) : const Duration(seconds: 8));
+  final uriFinal = construirUriHttpAuth(urlWsOBaseHttp, ruta);
+  final timeoutEfectivo = timeout ?? timeoutPorDefectoHttpAuth(uriFinal);
 
   final client = HttpClient()..connectionTimeout = timeoutEfectivo;
   try {

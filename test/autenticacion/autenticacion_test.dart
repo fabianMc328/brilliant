@@ -115,6 +115,23 @@ void main() {
       expect(ValidadorAuth.normalizarApodoClave('EL  PRO'), 'el pro');
       expect(ValidadorAuth.normalizarApodoClave('Peña'), 'peña');
     });
+
+    test('construirUriHttpAuth convierte wss/ws a https/http correctamente para Web y móvil', () {
+      expect(
+        construirUriHttpAuth(
+          'wss://servidorbrilliant.onrender.com',
+          '/auth/registro',
+        ).toString(),
+        'https://servidorbrilliant.onrender.com/auth/registro',
+      );
+      expect(
+        construirUriHttpAuth(
+          'ws://127.0.0.1:8080',
+          'auth/login',
+        ).toString(),
+        'http://127.0.0.1:8080/auth/login',
+      );
+    });
   });
 
   group('RepositorioAutenticacionLocal', () {

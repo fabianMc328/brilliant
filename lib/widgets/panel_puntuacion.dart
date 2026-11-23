@@ -130,27 +130,13 @@ class PanelPuntuacion extends StatelessWidget {
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(color: color.withValues(alpha: 0.4)),
                 ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Regla: ${tipoInstancia.descripcion}',
-                      style: TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w800,
-                        color: Colors.blueGrey.shade900,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      'Resumen: ${tipoInstancia.reglaCorta}',
-                      style: TextStyle(
-                        fontSize: 11.5,
-                        fontWeight: FontWeight.w600,
-                        color: Colors.blueGrey.shade700,
-                      ),
-                    ),
-                  ],
+                child: Text(
+                  'Regla: ${tipoInstancia.descripcion}',
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w800,
+                    color: Colors.blueGrey.shade900,
+                  ),
                 ),
               ),
               const SizedBox(height: 14),

@@ -122,27 +122,13 @@ class PanelCarreraRegiones extends StatelessWidget {
                   border:
                       Border.all(color: region.tipo.color.withValues(alpha: 0.4)),
                 ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Regla: ${region.tipo.descripcion}',
-                      style: TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w800,
-                        color: Colors.blueGrey.shade900,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      'Resumen: ${region.tipo.reglaCorta}',
-                      style: TextStyle(
-                        fontSize: 11.5,
-                        fontWeight: FontWeight.w600,
-                        color: Colors.blueGrey.shade700,
-                      ),
-                    ),
-                  ],
+                child: Text(
+                  'Regla: ${region.tipo.descripcion}',
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w800,
+                    color: Colors.blueGrey.shade900,
+                  ),
                 ),
               ),
               const SizedBox(height: 14),
