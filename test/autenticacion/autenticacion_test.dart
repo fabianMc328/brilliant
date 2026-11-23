@@ -16,8 +16,16 @@ import 'package:brilliant/autenticacion/vistas/pantalla_login.dart';
 class _ClienteHttpAuthSimulado extends ClienteHttpAuth {
   final Map<String, Map<String, dynamic>> _porApodo = {};
   final Map<String, Map<String, dynamic>> _porEmail = {};
-  final Set<String> _tokensActivos = {};
+  final Map<String, String> _usuarioPorToken = {};
+  final Map<String, String> _dispositivoPorUsuario = {};
   int _seq = 0;
+
+  void limpiarServidorSimulado() {
+    _porApodo.clear();
+    _porEmail.clear();
+    _usuarioPorToken.clear();
+    _dispositivoPorUsuario.clear();
+  }
 
   @override
   Future<RespuestaHttpAuth> enviar({
@@ -33,6 +41,7 @@ class _ClienteHttpAuthSimulado extends ClienteHttpAuth {
     if (ruta == '/auth/registro' && metodo == 'POST') {
       final apodo = (body['apodo'] as String? ?? '').trim();
       final email = (body['email'] as String? ?? '').trim().toLowerCase();
+      final disp = (body['dispositivoId'] as String? ?? '').trim();
       final clave = ValidadorAuth.normalizarApodoClave(apodo);
 
       if (_porApodo.containsKey(clave)) {
@@ -55,8 +64,9 @@ class _ClienteHttpAuthSimulado extends ClienteHttpAuth {
       }
 
       _seq += 1;
+      final uid = 'usr_$_seq';
       final usuario = {
-        'id': 'usr_$_seq',
+        'id': uid,
         'apodo': apodo,
         'email': email,
         'fechaRegistro': DateTime.utc(2026, 1, 1).toIso8601String(),
@@ -64,7 +74,10 @@ class _ClienteHttpAuthSimulado extends ClienteHttpAuth {
       _porApodo[clave] = {...usuario, 'pass': body['contrasena']};
       _porEmail[email] = _porApodo[clave]!;
       final token = 'tok_$_seq';
-      _tokensActivos.add(token);
+      _usuarioPorToken[token] = uid;
+      if (disp.isNotEmpty) {
+        _dispositivoPorUsuario[uid] = disp;
+      }
 
       return RespuestaHttpAuth(
         statusCode: 201,
@@ -74,6 +87,7 @@ class _ClienteHttpAuthSimulado extends ClienteHttpAuth {
 
     if (ruta == '/auth/login' && metodo == 'POST') {
       final id = (body['identificador'] as String? ?? '').trim();
+      final disp = (body['dispositivoId'] as String? ?? '').trim();
       final found = id.contains('@')
           ? _porEmail[id.toLowerCase()]
           : _porApodo[ValidadorAuth.normalizarApodoClave(id)];
@@ -83,17 +97,54 @@ class _ClienteHttpAuthSimulado extends ClienteHttpAuth {
           datos: {'error': 'Credenciales inválidas.'},
         );
       }
+
+      final uid = found['id'] as String;
+      final tieneSesionActiva = _usuarioPorToken.values.contains(uid);
+      final dispActivo = _dispositivoPorUsuario[uid];
+      if (tieneSesionActiva && (disp.isEmpty || dispActivo != disp)) {
+        return const RespuestaHttpAuth(
+          statusCode: 409,
+          datos: {
+            'error':
+                'Esta cuenta ya está conectada en otro dispositivo. Cierra sesión allá antes de entrar.',
+            'codigo': 'SESION_YA_ACTIVA',
+          },
+        );
+      }
+
+      _usuarioPorToken.removeWhere((_, v) => v == uid);
       final token = 'tok_login_${++_seq}';
-      _tokensActivos.add(token);
+      _usuarioPorToken[token] = uid;
+      if (disp.isNotEmpty) {
+        _dispositivoPorUsuario[uid] = disp;
+      }
       return RespuestaHttpAuth(
         statusCode: 200,
         datos: {'usuario': found, 'token': token},
       );
     }
 
+    if (ruta == '/auth/sesion' && metodo == 'GET') {
+      final uid = bearerToken == null ? null : _usuarioPorToken[bearerToken];
+      if (uid == null) {
+        return const RespuestaHttpAuth(
+          statusCode: 401,
+          datos: {'error': 'Sesión expirada o no válida.'},
+        );
+      }
+      final found = _porApodo.values.firstWhere((u) => u['id'] == uid);
+      return RespuestaHttpAuth(
+        statusCode: 200,
+        datos: {'usuario': found},
+      );
+    }
+
     if (ruta == '/auth/logout' && metodo == 'POST') {
       if (bearerToken != null) {
-        _tokensActivos.remove(bearerToken);
+        final uid = _usuarioPorToken.remove(bearerToken);
+        if (uid != null) {
+          _dispositivoPorUsuario.remove(uid);
+        }
       }
       return const RespuestaHttpAuth(statusCode: 200, datos: {'ok': true});
     }
@@ -279,29 +330,15 @@ void main() {
     });
   });
 
-  group('RepositorioAutenticacionServidor (unificación entre dispositivos)', () {
-    test('Impide que dos dispositivos registren el mismo apodo contra el servidor HTTP', () async {
+  group('RepositorioAutenticacionServidor (unificación y sesión única entre dispositivos)', () {
+    test('Impide registrar apodos iguales, bloquea doble login simultáneo y valida sesión con el servidor', () async {
       final clienteCompartido = _ClienteHttpAuthSimulado();
       const urlServidor = 'wss://servidorbrilliant.onrender.com';
 
-      // Dispositivo 1 (PC)
-      SharedPreferences.setMockInitialValues({});
-      final prefsPc = await SharedPreferences.getInstance();
-      final repoPc = RepositorioAutenticacionServidor(
-        preferences: prefsPc,
-        resolverUrlServidor: () async => urlServidor,
-        clienteHttp: clienteCompartido,
-      );
-
-      final userPc = await repoPc.registrarUsuario(
-        apodo: 'Fabian',
-        email: 'pc@correo.com',
-        contrasena: 'clavePC123',
-      );
-      expect(userPc.apodo, 'Fabian');
-
-      // Dispositivo 2 (Celular intentando registrar el mismo apodo con distinto correo)
-      SharedPreferences.setMockInitialValues({});
+      // Dispositivo 1 (Celular)
+      SharedPreferences.setMockInitialValues({
+        'brilliant_dispositivo_id_v1': 'disp_celular_1',
+      });
       final prefsCel = await SharedPreferences.getInstance();
       final repoCel = RepositorioAutenticacionServidor(
         preferences: prefsCel,
@@ -309,11 +346,30 @@ void main() {
         clienteHttp: clienteCompartido,
       );
 
+      final userCel = await repoCel.registrarUsuario(
+        apodo: 'Fabian',
+        email: 'cel@correo.com',
+        contrasena: 'clave123',
+      );
+      expect(userCel.apodo, 'Fabian');
+
+      // Dispositivo 2 (Página Web / PC con otro dispositivoId)
+      SharedPreferences.setMockInitialValues({
+        'brilliant_dispositivo_id_v1': 'disp_web_2',
+      });
+      final prefsWeb = await SharedPreferences.getInstance();
+      final repoWeb = RepositorioAutenticacionServidor(
+        preferences: prefsWeb,
+        resolverUrlServidor: () async => urlServidor,
+        clienteHttp: clienteCompartido,
+      );
+
+      // 1. No permite registrar usuario igual en el segundo dispositivo
       await expectLater(
-        repoCel.registrarUsuario(
+        repoWeb.registrarUsuario(
           apodo: 'fabian',
-          email: 'cel@correo.com',
-          contrasena: 'claveCel123',
+          email: 'web@correo.com',
+          contrasena: 'clave123',
         ),
         throwsA(
           predicate<FalloAutenticacion>(
@@ -322,19 +378,34 @@ void main() {
         ),
       );
 
-      // Con otro apodo único sí registra en Celular
-      final userCel = await repoCel.registrarUsuario(
-        apodo: 'InvitadoPro',
-        email: 'cel@correo.com',
-        contrasena: 'claveCel123',
+      // 2. Tampoco permite iniciar sesión con la misma cuenta mientras el celular sigue conectado
+      await expectLater(
+        repoWeb.iniciarSesion(
+          identificador: 'Fabian',
+          contrasena: 'clave123',
+        ),
+        throwsA(
+          predicate<FalloAutenticacion>(
+            (e) => e.mensaje.contains('ya está conectada en otro dispositivo'),
+          ),
+        ),
       );
-      expect(userCel.apodo, 'InvitadoPro');
 
-      // Sesión persistida funciona y cierra limpio
-      final sesion = await repoCel.obtenerUsuarioSesion();
-      expect(sesion?.apodo, 'InvitadoPro');
+      // 3. Si el primer dispositivo cierra sesión, el segundo dispositivo ya puede entrar
       await repoCel.cerrarSesion();
-      expect(await repoCel.obtenerUsuarioSesion(), isNull);
+      final userWeb = await repoWeb.iniciarSesion(
+        identificador: 'Fabian',
+        contrasena: 'clave123',
+      );
+      expect(userWeb.apodo, 'Fabian');
+
+      // 4. obtenerUsuarioSesion verifica contra /auth/sesion del servidor
+      final sesionVerificada = await repoWeb.obtenerUsuarioSesion();
+      expect(sesionVerificada?.apodo, 'Fabian');
+
+      // 5. Si el servidor se reinicia o revoca la sesión (401), obtenerUsuarioSesion limpia la sesión fantasma local
+      clienteCompartido.limpiarServidorSimulado();
+      expect(await repoWeb.obtenerUsuarioSesion(), isNull);
     });
   });
 

@@ -177,7 +177,7 @@ class _PantallaJuegoState extends State<PantallaJuego> {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      'Regiones completadas: ${state.regionesCompletadasIds.length}/8 · Turnos: ${state.turno}',
+                      'Regiones completadas: ${state.regionesCompletadasIds.length}/${state.tablero.regiones.length} · Turnos: ${state.turno}',
                       style: const TextStyle(
                         fontSize: 12.5,
                         fontWeight: FontWeight.w600,
