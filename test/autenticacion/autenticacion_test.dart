@@ -545,7 +545,26 @@ void main() {
       await tester.tap(find.text('Registrarse'));
       await tester.pumpAndSettle();
       await tester.enterText(find.byKey(const Key('input_registro_apodo')), 'fabian');
-      await tester.enterText(find.byKey(const Key('input_registro_email')), 'nuevo@test.com');
+
+      // Probar autocompletador @gmail.com exclusivo de registro
+      await tester.enterText(find.byKey(const Key('input_registro_email')), 'nuevo');
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('sugerencia_autocompletar_gmail')), findsOneWidget);
+      expect(find.text('Autocompletar: nuevo@gmail.com'), findsOneWidget);
+      await tester.tap(find.byKey(const Key('sugerencia_autocompletar_gmail')));
+      await tester.pumpAndSettle();
+      final campoEmailReg = tester.widget<TextFormField>(
+        find.byKey(const Key('input_registro_email')),
+      );
+      expect(campoEmailReg.controller?.text, 'nuevo@gmail.com');
+
+      // Y si escribe '@' al final del usuario, autocompleta '@gmail.com' automáticamente
+      await tester.enterText(find.byKey(const Key('input_registro_email')), 'jugador');
+      await tester.pump();
+      await tester.enterText(find.byKey(const Key('input_registro_email')), 'jugador@');
+      await tester.pumpAndSettle();
+      expect(campoEmailReg.controller?.text, 'jugador@gmail.com');
+
       await tester.enterText(find.byKey(const Key('input_registro_password')), 'clave1234');
       await tester.enterText(find.byKey(const Key('input_registro_confirm_password')), 'clave1234');
       await tester.ensureVisible(find.byKey(const Key('boton_crear_cuenta')));

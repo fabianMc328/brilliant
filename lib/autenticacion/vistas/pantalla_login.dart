@@ -33,6 +33,62 @@ class _PantallaLoginState extends State<PantallaLogin>
   final _ctrlRegConfirmPassword = TextEditingController();
   bool _ocultarRegPassword = true;
   bool _ocultarRegConfirmPassword = true;
+  String _ultimoEmailRegistro = '';
+
+  static const String _dominioGmail = '@gmail.com';
+
+  String? get _sugerenciaGmailRegistro {
+    final texto = _ctrlRegEmail.text.trim();
+    if (texto.isEmpty || RegExp(r'\s').hasMatch(texto)) return null;
+    final indiceArroba = texto.indexOf('@');
+    if (indiceArroba == -1) {
+      return '$texto$_dominioGmail';
+    }
+    final usuario = texto.substring(0, indiceArroba);
+    if (usuario.isEmpty) return null;
+    final dominioEscrito = texto.substring(indiceArroba).toLowerCase();
+    if (dominioEscrito == _dominioGmail) return null;
+    if (_dominioGmail.startsWith(dominioEscrito)) {
+      return '$usuario$_dominioGmail';
+    }
+    return null;
+  }
+
+  void _aplicarAutocompletadoGmail([String? sugerenciaExplicita]) {
+    final sugerencia = sugerenciaExplicita ?? _sugerenciaGmailRegistro;
+    if (sugerencia == null) return;
+    _ultimoEmailRegistro = sugerencia;
+    setState(() {
+      _ctrlRegEmail.value = TextEditingValue(
+        text: sugerencia,
+        selection: TextSelection.collapsed(offset: sugerencia.length),
+      );
+    });
+    _formKeyRegistro.currentState?.validate();
+  }
+
+  void _alCambiarEmailRegistro(String valor) {
+    final anterior = _ultimoEmailRegistro;
+    _ultimoEmailRegistro = valor;
+
+    // Si acaba de escribir '@' por primera vez al final del nombre, autocompleta gmail.com dejando 'gmail.com' seleccionado
+    if (!anterior.contains('@') &&
+        valor.endsWith('@') &&
+        valor.trim().length > 1 &&
+        !RegExp(r'\s').hasMatch(valor.trim())) {
+      final prefijo = valor.substring(0, valor.length - 1);
+      final completado = '$prefijo$_dominioGmail';
+      _ultimoEmailRegistro = completado;
+      _ctrlRegEmail.value = TextEditingValue(
+        text: completado,
+        selection: TextSelection(
+          baseOffset: prefijo.length + 1,
+          extentOffset: completado.length,
+        ),
+      );
+    }
+    setState(() {});
+  }
 
   @override
   void initState() {
@@ -402,16 +458,91 @@ class _PantallaLoginState extends State<PantallaLogin>
             keyboardType: TextInputType.emailAddress,
             textInputAction: TextInputAction.next,
             autofillHints: const [AutofillHints.email],
+            onChanged: _alCambiarEmailRegistro,
+            onFieldSubmitted: (_) {
+              if (_sugerenciaGmailRegistro != null &&
+                  !_ctrlRegEmail.text.contains('@')) {
+                _aplicarAutocompletadoGmail();
+              }
+            },
             validator: _validarEmailRegistro,
             decoration: InputDecoration(
               labelText: 'Correo Electrónico',
+              hintText: 'usuario@gmail.com',
               prefixIcon: const Icon(Icons.email_outlined),
+              suffixIcon: _sugerenciaGmailRegistro != null
+                  ? Padding(
+                      padding: const EdgeInsets.only(right: 6),
+                      child: TextButton(
+                        key: const Key('boton_autocompletar_gmail'),
+                        onPressed:
+                            cargando ? null : () => _aplicarAutocompletadoGmail(),
+                        style: TextButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(horizontal: 8),
+                          minimumSize: const Size(0, 32),
+                          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                        ),
+                        child: const Text(
+                          '@gmail.com',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w800,
+                            color: Color(0xFF2563EB),
+                          ),
+                        ),
+                      ),
+                    )
+                  : null,
               border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
               filled: true,
               fillColor: Colors.grey.shade50,
               isDense: true,
             ),
           ),
+          if (_sugerenciaGmailRegistro != null) ...[
+            const SizedBox(height: 6),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: InkWell(
+                key: const Key('sugerencia_autocompletar_gmail'),
+                onTap: cargando ? null : () => _aplicarAutocompletadoGmail(),
+                borderRadius: BorderRadius.circular(10),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 6,
+                  ),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFEFF6FF),
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: const Color(0xFFBFDBFE)),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(
+                        Icons.auto_awesome_rounded,
+                        size: 15,
+                        color: Color(0xFF2563EB),
+                      ),
+                      const SizedBox(width: 6),
+                      Flexible(
+                        child: Text(
+                          'Autocompletar: $_sugerenciaGmailRegistro',
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w700,
+                            color: Color(0xFF1E40AF),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ],
           const SizedBox(height: 10),
           TextFormField(
             key: const Key('input_registro_password'),
