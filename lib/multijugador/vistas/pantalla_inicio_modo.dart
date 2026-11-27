@@ -5,6 +5,8 @@ import '../../autenticacion/bloc/auth_bloc.dart';
 import '../../autenticacion/bloc/auth_evento.dart';
 import '../../autenticacion/dominio/usuario.dart';
 import '../../pantalla_seleccion_nivel.dart';
+import '../../rankings/infraestructura/servicio_rankings.dart';
+import '../../rankings/vistas/dialogo_rankings.dart';
 import '../../widgets/dialogo_como_jugar.dart';
 import '../dominio/repositorio_multijugador.dart';
 import 'pantalla_lobby_multijugador.dart';
@@ -13,11 +15,13 @@ import 'pantalla_lobby_multijugador.dart';
 class PantallaInicioModo extends StatelessWidget {
   final RepositorioMultijugador? repositorioMultijugador;
   final Usuario? usuarioAutenticado;
+  final ServicioRankings? servicioRankings;
 
   const PantallaInicioModo({
     super.key,
     this.repositorioMultijugador,
     this.usuarioAutenticado,
+    this.servicioRankings,
   });
 
   void _mostrarDialogoPerfil(BuildContext context, Usuario usuario) {
@@ -286,6 +290,25 @@ class PantallaInicioModo extends StatelessWidget {
                                   apodoInicial: usuarioAutenticado?.apodo,
                                 ),
                               ),
+                            );
+                          },
+                        ),
+                        const SizedBox(height: 14),
+
+                        // Tarjeta Tabla de Rankings
+                        _TarjetaModoJuego(
+                          keyBoton: const Key('boton_abrir_rankings'),
+                          icono: Icons.emoji_events_rounded,
+                          colorAcento: const Color(0xFFD97706),
+                          etiquetaBadge: 'Top Global',
+                          titulo: 'Tabla de Rankings',
+                          subtitulo:
+                              'Consulta los líderes por victorias en Multijugador y los mejores récords en Solitario.',
+                          onTap: () {
+                            DialogoRankings.mostrar(
+                              context,
+                              miApodo: usuarioAutenticado?.apodo,
+                              servicio: servicioRankings,
                             );
                           },
                         ),

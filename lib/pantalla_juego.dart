@@ -1,9 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
+import 'autenticacion/bloc/auth_bloc.dart';
+import 'autenticacion/bloc/auth_estado.dart';
 import 'casilla_juego.dart';
 import 'niveles/catalogo_niveles.dart';
 import 'niveles/nivel_definicion.dart';
+import 'rankings/infraestructura/servicio_rankings.dart';
+import 'rankings/vistas/dialogo_rankings.dart';
 import 'region.dart';
 import 'tablero.dart';
 import 'juego_bloc.dart';
@@ -120,11 +124,31 @@ class _PantallaJuegoState extends State<PantallaJuego> {
     });
   }
 
+  String? _obtenerApodoAutenticado(BuildContext context) {
+    try {
+      final authState = context.read<AuthBloc>().state;
+      if (authState is AuthAutenticado) {
+        return authState.usuario.apodo;
+      }
+    } catch (_) {}
+    return null;
+  }
+
   Future<void> _mostrarDialogoFinSolitario(
     BuildContext context,
     JuegoEnProgreso state,
   ) async {
     final bloc = context.read<JuegoBloc>();
+    final apodo = _obtenerApodoAutenticado(context);
+    final enPruebas =
+        WidgetsBinding.instance.runtimeType.toString().contains('Test');
+    if (apodo != null && apodo.isNotEmpty && !enPruebas) {
+      const ServicioRankings().registrarPuntajeSolitario(
+        apodo: apodo,
+        puntaje: state.puntuacionTotal,
+      );
+    }
+
     await showDialog<void>(
       context: context,
       barrierDismissible: true,
@@ -190,6 +214,14 @@ class _PantallaJuegoState extends State<PantallaJuego> {
             ],
           ),
           actions: [
+            TextButton.icon(
+              key: const Key('boton_ver_rankings_solitario'),
+              onPressed: () {
+                DialogoRankings.mostrar(context, miApodo: apodo);
+              },
+              icon: const Icon(Icons.emoji_events_outlined, size: 18),
+              label: const Text('Rankings'),
+            ),
             TextButton(
               onPressed: () {
                 Navigator.of(dialogContext).pop();

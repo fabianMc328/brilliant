@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../rankings/vistas/dialogo_rankings.dart';
 import '../dominio/estado_sala_multijugador.dart';
 import '../dominio/estados_jugador_sala.dart';
 
@@ -164,6 +165,33 @@ class VistaPodioMultijugador extends StatelessWidget {
                     );
                   }),
                   const SizedBox(height: 12),
+                  SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton.icon(
+                      key: const Key('boton_ver_rankings_podio'),
+                      onPressed: () {
+                        DialogoRankings.mostrar(
+                          context,
+                          miApodo: sala.miResumen?.apodo,
+                        );
+                      },
+                      icon: Icon(
+                        Icons.emoji_events_rounded,
+                        color: Colors.amber.shade800,
+                      ),
+                      label: const Text('Ver Tabla de Rankings'),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: Colors.amber.shade900,
+                        backgroundColor: Colors.amber.shade50,
+                        side: BorderSide(color: Colors.amber.shade400),
+                        padding: const EdgeInsets.symmetric(vertical: 11),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
                   SizedBox(
                     width: double.infinity,
                     child: ElevatedButton.icon(

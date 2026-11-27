@@ -7,6 +7,7 @@ import 'package:flutter/widgets.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../multijugador/infraestructura/descubridor_servidor_local.dart';
+import '../../rankings/infraestructura/servicio_rankings.dart';
 import '../dominio/repositorio_autenticacion.dart';
 import '../dominio/usuario.dart';
 import '../dominio/validador_auth.dart';
@@ -114,12 +115,22 @@ class RepositorioAutenticacionServidor implements RepositorioAutenticacion {
     );
   }
 
-  Future<void> _guardarSesion(Usuario usuario, String token) async {
+  Future<void> _guardarSesion(
+    Usuario usuario,
+    String token, {
+    Map<String, dynamic>? respaldoCuenta,
+  }) async {
     _usuarioActivoEnMemoria = usuario;
     _tokenActivoEnMemoria = token;
     final prefs = await _obtenerPrefs();
     await prefs.setString(_claveUsuarioSesion, jsonEncode(usuario.toJson()));
     await prefs.setString(_claveTokenSesion, token);
+    if (respaldoCuenta != null) {
+      await ServicioRankings.guardarRespaldoCuentaIndividual(
+        respaldoCuenta,
+        preferences: prefs,
+      );
+    }
     _iniciarHeartbeat(token);
   }
 
@@ -185,9 +196,11 @@ class RepositorioAutenticacionServidor implements RepositorioAutenticacion {
     }
 
     RespuestaHttpAuth respuesta;
+    String urlServidor;
+    String dispId;
     try {
-      final urlServidor = await _obtenerUrlServidorActiva();
-      final dispId = await _obtenerOCrearDispositivoId();
+      urlServidor = await _obtenerUrlServidorActiva();
+      dispId = await _obtenerOCrearDispositivoId();
       respuesta = await _clienteHttp.enviar(
         metodo: 'GET',
         urlWsOBaseHttp: urlServidor,
@@ -199,8 +212,49 @@ class RepositorioAutenticacionServidor implements RepositorioAutenticacion {
       return null;
     }
 
+    // Si el contenedor gratuito de Render despertó de inactividad en 0, re-hidratar
+    // las cuentas respaldadas en SharedPreferences y restaurar la sesión activa.
+    if (respuesta.statusCode == 401) {
+      final respaldadas = ServicioRankings.obtenerCuentasRespaldadasSync(prefs);
+      if (respaldadas.isNotEmpty) {
+        try {
+          final syncRes = await _clienteHttp.enviar(
+            metodo: 'POST',
+            urlWsOBaseHttp: urlServidor,
+            ruta: '/rankings/sincronizar',
+            cuerpoJson: {
+              'cuentas': respaldadas,
+              'sesionActiva': {
+                'token': token,
+                'apodo': usuarioLocal.apodo,
+                'dispositivoId': dispId,
+              },
+            },
+            timeout: _timeoutPeticion,
+          );
+          if (syncRes.statusCode == 200) {
+            respuesta = await _clienteHttp.enviar(
+              metodo: 'GET',
+              urlWsOBaseHttp: urlServidor,
+              ruta:
+                  '/auth/sesion?dispositivoId=${Uri.encodeQueryComponent(dispId)}',
+              bearerToken: token,
+              timeout: _timeoutPeticion,
+            );
+          }
+        } catch (_) {}
+      }
+    }
+
     if (respuesta.statusCode == 200) {
       final rawRemoto = respuesta.datos['usuario'];
+      final rawRespaldo = respuesta.datos['respaldoCuenta'];
+      if (rawRespaldo is Map<String, dynamic>) {
+        await ServicioRankings.guardarRespaldoCuentaIndividual(
+          rawRespaldo,
+          preferences: prefs,
+        );
+      }
       final verificado = rawRemoto is Map<String, dynamic>
           ? Usuario.fromJson(rawRemoto)
           : usuarioLocal;
@@ -318,11 +372,17 @@ class RepositorioAutenticacionServidor implements RepositorioAutenticacion {
     if (respuesta.statusCode >= 200 && respuesta.statusCode < 300) {
       final rawUsuario = respuesta.datos['usuario'];
       final token = respuesta.datos['token'];
+      final rawRespaldo = respuesta.datos['respaldoCuenta'];
       if (rawUsuario is Map<String, dynamic> &&
           token is String &&
           token.isNotEmpty) {
         final usuario = Usuario.fromJson(rawUsuario);
-        await _guardarSesion(usuario, token);
+        await _guardarSesion(
+          usuario,
+          token,
+          respaldoCuenta:
+              rawRespaldo is Map<String, dynamic> ? rawRespaldo : null,
+        );
         return usuario;
       }
       throw const FalloAutenticacion(

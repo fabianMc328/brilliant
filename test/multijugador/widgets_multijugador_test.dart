@@ -6,6 +6,7 @@ import 'package:brilliant/autenticacion/bloc/auth_bloc.dart';
 import 'package:brilliant/autenticacion/bloc/auth_estado.dart';
 import 'package:brilliant/autenticacion/dominio/usuario.dart';
 import 'package:brilliant/autenticacion/infraestructura/repositorio_autenticacion_local.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:brilliant/multijugador/bloc/partida_multijugador_bloc.dart';
 import 'package:brilliant/multijugador/dominio/estado_carrera_region.dart';
 import 'package:brilliant/multijugador/dominio/estado_sala_multijugador.dart';
@@ -67,11 +68,25 @@ void main() {
       );
       expect(find.text('Modo Solitario'), findsOneWidget);
       expect(find.text('Multijugador (2 a 6 Jugadores)'), findsOneWidget);
+      expect(find.text('Tabla de Rankings'), findsOneWidget);
       expect(
         find.text(
             'Crea o únete a salas con el código para competir con tus amigos.'),
         findsOneWidget,
       );
+
+      // Abrir Tabla de Rankings y cambiar entre Multijugador y Solitario
+      SharedPreferences.setMockInitialValues({});
+      await tester.ensureVisible(find.byKey(const Key('boton_abrir_rankings')));
+      await tester.tap(find.byKey(const Key('boton_abrir_rankings')));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('dialogo_rankings')), findsOneWidget);
+      expect(find.text('Multijugador'), findsOneWidget);
+      expect(find.text('Solitario'), findsOneWidget);
+      await tester.tap(find.text('Solitario'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('boton_cerrar_rankings')));
+      await tester.pumpAndSettle();
 
       // Navega a Modo Solitario y regresa
       await tester.tap(find.byKey(const Key('boton_modo_solitario')));
